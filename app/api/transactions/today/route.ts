@@ -29,10 +29,14 @@ export async function GET(request: NextRequest) {
 
     const completed = transactions.filter((tx) => tx.status === TransactionStatus.COMPLETED)
 
+    // Get list of stock codes already traded today
+    const tradedStockCodes = [...new Set(completed.map((tx) => tx.company.stockCode))]
+
     const summary = completed.length
       ? {
           dayNumber: currentDay,
           totalTransactions: completed.length,
+          tradedStockCodes,
           buys: completed
             .filter((tx) => tx.transactionType === 'BUY')
             .map((tx) => ({
@@ -49,13 +53,14 @@ export async function GET(request: NextRequest) {
               price: Number(tx.pricePerShare),
               total: Number(tx.totalAmount),
             })),
-          brokerFee: completed.length ? Number(completed[0].brokerFee) : 0,
+          brokerFee: completed.reduce((sum, tx) => sum + Number(tx.brokerFee), 0),
           balanceAfter: completed.length ? Number(completed[0].balanceAfter) : Number(user.currentBalance),
         }
       : null
 
     return NextResponse.json({
       hasTransaction: completed.length > 0,
+      tradedStockCodes,
       summary,
     })
   } catch (error) {

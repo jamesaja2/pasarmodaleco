@@ -53,6 +53,7 @@ export default function TransactionPage() {
   const [currentBalance, setCurrentBalance] = useState(0)
   const [currentDay, setCurrentDay] = useState(0)
   const [simulationActive, setSimulationActive] = useState(false)
+  const [tradedStockCodes, setTradedStockCodes] = useState<string[]>([])
   const [selectedStock, setSelectedStock] = useState<StockRow | null>(null)
   const [transactionType, setTransactionType] = useState<'buy' | 'sell'>('buy')
   const [showForm, setShowForm] = useState(false)
@@ -66,15 +67,17 @@ export default function TransactionPage() {
     setLoadingPage(true)
     setError(null)
     try {
-      const [dayControl, portfolio, companies] = await Promise.all([
+      const [dayControl, portfolio, companies, todayTx] = await Promise.all([
         apiClient.get<{ currentDay: number; isSimulationActive: boolean }>('/days/current'),
         apiClient.get<{ summary: any; holdings: any[] }>('/portfolio'),
         apiClient.get<{ companies: any[] }>('/companies'),
+        apiClient.get<{ tradedStockCodes?: string[] }>('/transactions/today'),
       ])
 
       setCurrentDay(Number(dayControl.currentDay ?? 0))
       setSimulationActive(Boolean(dayControl.isSimulationActive))
       setCurrentBalance(toNumber(portfolio.summary?.cashBalance))
+      setTradedStockCodes(todayTx.tradedStockCodes ?? [])
 
       const holdingByCode = new Map(
         (portfolio.holdings ?? []).map((holding) => [String(holding.stockCode ?? holding.company?.stockCode ?? ''), holding])
@@ -227,35 +230,47 @@ export default function TransactionPage() {
                 </tr>
               </thead>
               <tbody>
-                {stocks.map((stock) => (
-                  <tr key={stock.code} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4 font-semibold text-emerald-600">{stock.code}</td>
-                    <td className="py-3 px-4">{stock.name}</td>
-                    <td className="py-3 px-4 text-right">Rp {Number(stock.price).toLocaleString('id-ID')}</td>
-                    <td className="py-3 px-4 text-right">{stock.ownedLots.toLocaleString('id-ID')} lot</td>
-                    <td className="py-3 px-4 text-right font-semibold">Rp {Number(stock.equity).toLocaleString('id-ID')}</td>
-                    <td className="py-3 px-4 text-center flex justify-center gap-2">
-                      <Button
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700"
-                        onClick={() => openBuyModal(stock)}
-                        disabled={!simulationActive}
-                      >
-                        <ShoppingCart className="w-4 h-4 mr-1" />
-                        Beli
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="bg-red-600 hover:bg-red-700"
-                        onClick={() => openSellModal(stock)}
-                        disabled={!simulationActive || stock.ownedShares < 100}
-                      >
-                        <TrendingDown className="w-4 h-4 mr-1" />
-                        Jual
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                {stocks.map((stock) => {
+                  const alreadyTraded = tradedStockCodes.includes(stock.code)
+                  return (
+                    <tr key={stock.code} className={`border-b border-gray-100 hover:bg-gray-50 ${alreadyTraded ? 'bg-gray-50 opacity-60' : ''}`}>
+                      <td className="py-3 px-4 font-semibold text-emerald-600">{stock.code}</td>
+                      <td className="py-3 px-4">
+                        {stock.name}
+                        {alreadyTraded && (
+                          <span className="ml-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">
+                            Sudah transaksi hari ini
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right">Rp {Number(stock.price).toLocaleString('id-ID')}</td>
+                      <td className="py-3 px-4 text-right">{stock.ownedLots.toLocaleString('id-ID')} lot</td>
+                      <td className="py-3 px-4 text-right font-semibold">Rp {Number(stock.equity).toLocaleString('id-ID')}</td>
+                      <td className="py-3 px-4 text-center flex justify-center gap-2">
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => openBuyModal(stock)}
+                          disabled={!simulationActive || alreadyTraded}
+                          title={alreadyTraded ? 'Sudah transaksi hari ini' : ''}
+                        >
+                          <ShoppingCart className="w-4 h-4 mr-1" />
+                          Beli
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="bg-red-600 hover:bg-red-700"
+                          onClick={() => openSellModal(stock)}
+                          disabled={!simulationActive || stock.ownedShares < 100 || alreadyTraded}
+                          title={alreadyTraded ? 'Sudah transaksi hari ini' : ''}
+                        >
+                          <TrendingDown className="w-4 h-4 mr-1" />
+                          Jual
+                        </Button>
+                      </td>
+                    </tr>
+                  )
+                })}
                 {!loadingPage && stocks.length === 0 && (
                   <tr>
                     <td colSpan={6} className="py-6 text-center text-sm text-gray-500">

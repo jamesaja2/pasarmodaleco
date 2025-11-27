@@ -53,18 +53,6 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const existingTransactions = await prisma.transaction.count({
-      where: {
-        userId: user.id,
-        dayNumber: currentDay,
-        status: TransactionStatus.COMPLETED,
-      },
-    })
-
-    if (existingTransactions > 0) {
-      return NextResponse.json({ error: 'Daily transaction already completed' }, { status: 409 })
-    }
-
     const stockCodes = [...new Set(transactions.map((tx) => tx.stockCode.toUpperCase()))]
     const companies = await prisma.company.findMany({
       where: { stockCode: { in: stockCodes } },
@@ -72,6 +60,29 @@ export async function POST(request: NextRequest) {
 
     if (companies.length !== stockCodes.length) {
       return NextResponse.json({ error: 'One or more stock codes are invalid' }, { status: 400 })
+    }
+
+    const companyMap = new Map(companies.map((company) => [company.stockCode, company]))
+
+    // Check if user already has transaction for any of these companies today
+    const existingTransactions = await prisma.transaction.findMany({
+      where: {
+        userId: user.id,
+        dayNumber: currentDay,
+        companyId: { in: companies.map((c) => c.id) },
+        status: TransactionStatus.COMPLETED,
+      },
+      include: {
+        company: { select: { stockCode: true } },
+      },
+    })
+
+    if (existingTransactions.length > 0) {
+      const tradedStocks = existingTransactions.map((tx) => tx.company.stockCode).join(', ')
+      return NextResponse.json({ 
+        error: `Anda sudah bertransaksi untuk saham ${tradedStocks} hari ini. Pilih saham lain atau tunggu hari berikutnya.`,
+        tradedStocks: existingTransactions.map((tx) => tx.company.stockCode),
+      }, { status: 409 })
     }
 
     const prices = await prisma.stockPrice.findMany({
@@ -85,8 +96,6 @@ export async function POST(request: NextRequest) {
     prices.forEach((price) => {
       priceMap.set(price.companyId, price)
     })
-
-    const companyMap = new Map(companies.map((company) => [company.stockCode, company]))
 
     const holdings = await prisma.portfolioHolding.findMany({
       where: {
