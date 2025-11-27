@@ -115,6 +115,10 @@ function startServer() {
 }
 
 function getServer() {
+  // In production/serverless, don't auto-start
+  if (process.env.NODE_ENV !== 'development') {
+    return { wss: null, clients: new Map() }
+  }
   if (!wss || !clients) {
     return startServer()
   }
@@ -122,6 +126,9 @@ function getServer() {
 }
 
 export function broadcast(type: BroadcastType, payload: unknown) {
+  // Skip broadcasting in serverless environments
+  if (process.env.NODE_ENV !== 'development') return
+  
   const { clients } = getServer()
   const message = serialize(type, payload)
   for (const ctx of clients.values()) {
@@ -132,6 +139,9 @@ export function broadcast(type: BroadcastType, payload: unknown) {
 }
 
 export async function broadcastPriceUpdate(stockCode: string) {
+  // Skip in serverless environments
+  if (process.env.NODE_ENV !== 'development') return
+  
   const { clients } = getServer()
   const company = await prisma.company.findUnique({
     where: { stockCode },
@@ -199,13 +209,15 @@ export function broadcastNotification(notification: {
 }
 
 export function ensureRealtimeServer() {
-  getServer()
-}
-
-if (typeof window === 'undefined') {
-  try {
-    startServer()
-  } catch (error) {
-    console.error('Failed to start realtime server', error)
+  // Only start in development mode, not in serverless environments like Vercel
+  if (process.env.NODE_ENV === 'development' && typeof window === 'undefined') {
+    try {
+      getServer()
+    } catch (error) {
+      console.error('Failed to start realtime server', error)
+    }
   }
 }
+
+// Don't auto-start on module import - causes issues in serverless environments
+// The server should only be started explicitly when needed
