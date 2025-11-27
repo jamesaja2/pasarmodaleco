@@ -1,0 +1,74 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/auth'
+import { getCache, CACHE_KEYS } from '@/lib/cache'
+
+const companySchema = z.object({
+  stockCode: z.string().min(3).max(5),
+  companyName: z.string().min(3),
+  sector: z.string().min(3),
+  description: z.string().optional(),
+  location: z.string().optional(),
+  logoUrl: z.string().url().optional(),
+})
+
+export async function GET(request: NextRequest) {
+  try {
+    await requireAdmin(request)
+
+    const companies = await prisma.company.findMany({
+      orderBy: { stockCode: 'asc' },
+    })
+
+    return NextResponse.json({
+      companies,
+      total: companies.length,
+    })
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message === 'UNAUTHENTICATED') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (error instanceof Error && error.message === 'FORBIDDEN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    console.error('Failed to fetch companies (admin)', error)
+    return NextResponse.json({ error: 'Failed to fetch companies' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    await requireAdmin(request)
+    const body = await request.json()
+    const data = companySchema.parse(body)
+
+    const company = await prisma.company.create({
+      data: {
+        stockCode: data.stockCode.toUpperCase(),
+        companyName: data.companyName,
+        sector: data.sector,
+        description: data.description,
+        location: data.location,
+        logoUrl: data.logoUrl,
+      },
+    })
+
+    const cache = await getCache()
+    await cache.del(CACHE_KEYS.COMPANIES)
+
+    return NextResponse.json({ success: true, company })
+  } catch (error: unknown) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.issues[0]?.message ?? 'Invalid payload' }, { status: 400 })
+    }
+    if (error instanceof Error && error.message === 'UNAUTHENTICATED') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (error instanceof Error && error.message === 'FORBIDDEN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+    console.error('Failed to create company', error)
+    return NextResponse.json({ error: 'Failed to create company' }, { status: 500 })
+  }
+}
