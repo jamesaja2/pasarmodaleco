@@ -30,16 +30,20 @@ function toNumber(value: unknown): number {
 }
 
 async function loadSettings() {
-  const [sebSetting, ipSetting, startingSetting, dayControl] = await Promise.all([
+  const [sebSetting, ipSetting, startingSetting, dayControl, sebEnabled, ipEnabled] = await Promise.all([
     prisma.setting.findUnique({ where: { key: 'seb_user_agent' } }),
     prisma.setting.findUnique({ where: { key: 'allowed_ips' } }),
     prisma.setting.findUnique({ where: { key: 'starting_balance' } }),
     prisma.dayControl.findUnique({ where: { id: 'day-control-singleton' } }),
+    prisma.setting.findUnique({ where: { key: 'seb_enabled' } }),
+    prisma.setting.findUnique({ where: { key: 'ip_restriction_enabled' } }),
   ])
 
   return {
     sebUserAgent: typeof sebSetting?.value === 'string' ? sebSetting.value : '',
+    sebEnabled: sebEnabled?.value === true || sebEnabled?.value === 'true',
     allowedIps: parseAllowedIps(ipSetting?.value ?? []),
+    ipRestrictionEnabled: ipEnabled?.value === true || ipEnabled?.value === 'true',
     startingBalance: toNumber(startingSetting?.value ?? 10000000),
     totalDays: dayControl?.totalDays ?? 15,
   }
@@ -47,7 +51,9 @@ async function loadSettings() {
 
 const updateSchema = z.object({
   sebUserAgent: z.string().trim().max(255).optional(),
+  sebEnabled: z.boolean().optional(),
   allowedIps: z.array(z.string().trim().min(1)).optional(),
+  ipRestrictionEnabled: z.boolean().optional(),
   startingBalance: z.number().nonnegative().optional(),
   totalDays: z.number().int().positive().optional(),
 })
@@ -92,6 +98,18 @@ export async function POST(request: NextRequest) {
         })
       }
 
+      if (payload.sebEnabled !== undefined) {
+        await tx.setting.upsert({
+          where: { key: 'seb_enabled' },
+          update: { value: payload.sebEnabled },
+          create: {
+            key: 'seb_enabled',
+            value: payload.sebEnabled,
+            description: 'Aktifkan validasi Safe Exam Browser',
+          },
+        })
+      }
+
       if (payload.allowedIps !== undefined) {
         const normalized = payload.allowedIps.map((ip) => ip.trim()).filter(Boolean)
         await tx.setting.upsert({
@@ -101,6 +119,18 @@ export async function POST(request: NextRequest) {
             key: 'allowed_ips',
             value: normalized,
             description: 'Daftar IP yang diizinkan mengakses sistem',
+          },
+        })
+      }
+
+      if (payload.ipRestrictionEnabled !== undefined) {
+        await tx.setting.upsert({
+          where: { key: 'ip_restriction_enabled' },
+          update: { value: payload.ipRestrictionEnabled },
+          create: {
+            key: 'ip_restriction_enabled',
+            value: payload.ipRestrictionEnabled,
+            description: 'Aktifkan pembatasan IP',
           },
         })
       }

@@ -4,13 +4,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Plus, Trash2, Save, Loader2, AlertCircle } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { Plus, Trash2, Save, Loader2, AlertCircle, Shield, Globe } from 'lucide-react'
 import { apiClient, ApiError } from '@/lib/api-client'
 import { useToast } from '@/hooks/use-toast'
 
 type SettingsState = {
   sebUserAgent: string
+  sebEnabled: boolean
   allowedIps: string[]
+  ipRestrictionEnabled: boolean
   startingBalance: number
   totalDays: number
 }
@@ -32,7 +35,9 @@ export default function SettingsPage() {
       const data = await apiClient.get<SettingsState>('/admin/settings')
       setSettings({
         sebUserAgent: data.sebUserAgent ?? '',
+        sebEnabled: data.sebEnabled ?? false,
         allowedIps: data.allowedIps ?? [],
+        ipRestrictionEnabled: data.ipRestrictionEnabled ?? false,
         startingBalance: data.startingBalance ?? 0,
         totalDays: data.totalDays ?? 0,
       })
@@ -74,8 +79,9 @@ export default function SettingsPage() {
     try {
       await apiClient.post('/admin/settings', {
         sebUserAgent: settings.sebUserAgent.trim(),
+        sebEnabled: settings.sebEnabled,
       })
-      toast({ title: 'Pengaturan disimpan', description: 'User agent Safe Exam Browser berhasil diperbarui.' })
+      toast({ title: 'Pengaturan disimpan', description: 'Konfigurasi Safe Exam Browser berhasil diperbarui.' })
     } catch (err) {
       const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Gagal menyimpan user agent'
       setError(message)
@@ -92,6 +98,7 @@ export default function SettingsPage() {
     try {
       await apiClient.post('/admin/settings', {
         allowedIps,
+        ipRestrictionEnabled: settings.ipRestrictionEnabled,
       })
       toast({ title: 'Whitelist diperbarui', description: 'Daftar IP berhasil diperbarui.' })
     } catch (err) {
@@ -145,18 +152,39 @@ export default function SettingsPage() {
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Konfigurasi Safe Exam Browser</CardTitle>
-              <CardDescription>Atur parameter keamanan akses peserta</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="w-5 h-5" />
+                    Konfigurasi Safe Exam Browser
+                  </CardTitle>
+                  <CardDescription>Atur parameter keamanan akses peserta</CardDescription>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`text-sm font-medium ${settings.sebEnabled ? 'text-emerald-600' : 'text-gray-500'}`}>
+                    {settings.sebEnabled ? 'Aktif' : 'Nonaktif'}
+                  </span>
+                  <Switch
+                    checked={settings.sebEnabled}
+                    onCheckedChange={(checked) => setSettings({ ...settings, sebEnabled: checked })}
+                  />
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
+              <div className={`space-y-2 ${!settings.sebEnabled ? 'opacity-50' : ''}`}>
                 <label className="font-semibold text-sm">User Agent String SEB</label>
                 <Input
                   value={settings.sebUserAgent}
                   onChange={(e) => setSettings({ ...settings, sebUserAgent: e.target.value })}
                   placeholder="Contoh: SafeExamBrowser/3.3.2"
+                  disabled={!settings.sebEnabled}
                 />
-                <p className="text-xs text-gray-600">Hanya perangkat dengan user agent ini yang dapat mengakses dashboard peserta.</p>
+                <p className="text-xs text-gray-600">
+                  {settings.sebEnabled 
+                    ? 'Hanya perangkat dengan user agent ini yang dapat mengakses dashboard peserta.'
+                    : 'Aktifkan toggle untuk menggunakan validasi SEB.'}
+                </p>
               </div>
               <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={handleSaveSeb} disabled={savingSeb}>
                 {savingSeb ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
@@ -167,48 +195,74 @@ export default function SettingsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>IP Whitelist</CardTitle>
-              <CardDescription>Daftar IP yang diizinkan mengakses sistem</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe className="w-5 h-5" />
+                    IP Whitelist
+                  </CardTitle>
+                  <CardDescription>Daftar IP yang diizinkan mengakses sistem</CardDescription>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`text-sm font-medium ${settings.ipRestrictionEnabled ? 'text-emerald-600' : 'text-gray-500'}`}>
+                    {settings.ipRestrictionEnabled ? 'Aktif' : 'Nonaktif'}
+                  </span>
+                  <Switch
+                    checked={settings.ipRestrictionEnabled}
+                    onCheckedChange={(checked) => setSettings({ ...settings, ipRestrictionEnabled: checked })}
+                  />
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Input
-                  value={newIp}
-                  onChange={(e) => setNewIp(e.target.value)}
-                  placeholder="Masukkan IP address (contoh: 192.168.1.100)"
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddIp()}
-                />
-                <Button onClick={handleAddIp} className="bg-green-600 hover:bg-green-700">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Tambah
-                </Button>
-              </div>
+              <div className={!settings.ipRestrictionEnabled ? 'opacity-50' : ''}>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input
+                    value={newIp}
+                    onChange={(e) => setNewIp(e.target.value)}
+                    placeholder="Masukkan IP address (contoh: 192.168.1.100)"
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddIp()}
+                    disabled={!settings.ipRestrictionEnabled}
+                  />
+                  <Button 
+                    onClick={handleAddIp} 
+                    className="bg-green-600 hover:bg-green-700"
+                    disabled={!settings.ipRestrictionEnabled}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Tambah
+                  </Button>
+                </div>
 
-              <div className="space-y-2">
-                <p className="font-semibold text-sm">{allowedIps.length} IP Terdaftar</p>
-                <div className="space-y-2">
-                  {allowedIps.length === 0 ? (
-                    <div className="rounded border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
-                      Belum ada IP yang di-whitelist. Semua IP akan ditolak saat validasi berjalan.
-                    </div>
-                  ) : (
-                    allowedIps.map((ip) => (
-                      <div
-                        key={ip}
-                        className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200"
-                      >
-                        <span className="font-mono text-sm">{ip}</span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-red-600 hover:bg-red-50"
-                          onClick={() => handleRemoveIp(ip)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                <div className="space-y-2 mt-4">
+                  <p className="font-semibold text-sm">{allowedIps.length} IP Terdaftar</p>
+                  <div className="space-y-2">
+                    {allowedIps.length === 0 ? (
+                      <div className="rounded border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-500">
+                        {settings.ipRestrictionEnabled 
+                          ? 'Belum ada IP yang di-whitelist. Semua IP akan ditolak saat validasi berjalan.'
+                          : 'IP Restriction nonaktif. Semua IP diizinkan.'}
                       </div>
-                    ))
-                  )}
+                    ) : (
+                      allowedIps.map((ip) => (
+                        <div
+                          key={ip}
+                          className="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200"
+                        >
+                          <span className="font-mono text-sm">{ip}</span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 hover:bg-red-50"
+                            onClick={() => handleRemoveIp(ip)}
+                            disabled={!settings.ipRestrictionEnabled}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
 

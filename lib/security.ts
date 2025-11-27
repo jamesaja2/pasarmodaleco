@@ -52,6 +52,14 @@ function ipToLong(ip: string) {
 }
 
 export async function validateSafeExamBrowser(request: NextRequest) {
+  // Check if SEB validation is enabled
+  const enabledSetting = await prisma.setting.findUnique({ where: { key: 'seb_enabled' } })
+  const isEnabled = enabledSetting?.value === true || enabledSetting?.value === 'true'
+  
+  if (!isEnabled) {
+    return { allowed: true }
+  }
+
   const userAgent = request.headers.get('user-agent') ?? ''
   const setting = await prisma.setting.findUnique({ where: { key: 'seb_user_agent' } })
   if (!setting) {
@@ -101,6 +109,14 @@ function extractClientIP(request: NextRequest) {
 }
 
 export async function validateIPWhitelist(request: NextRequest) {
+  // Check if IP restriction is enabled
+  const enabledSetting = await prisma.setting.findUnique({ where: { key: 'ip_restriction_enabled' } })
+  const isEnabled = enabledSetting?.value === true || enabledSetting?.value === 'true'
+  
+  if (!isEnabled) {
+    return { allowed: true }
+  }
+
   const clientIP = extractClientIP(request)
   if (!clientIP) {
     return { allowed: false, error: 'Unable to determine client IP address' }
