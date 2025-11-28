@@ -77,6 +77,7 @@ function normalizeUser(raw: any): SessionUser {
       : null,
     lastLogin: raw.lastLogin ?? null,
     requiresBrokerSelection: Boolean(raw.requiresBrokerSelection ?? (!raw.broker || !raw.broker.id)),
+    isSuperAdmin: Boolean(raw.isSuperAdmin),
   }
 }
 
