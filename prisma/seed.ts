@@ -175,7 +175,7 @@ async function main() {
     },
   })
 
-  // Seed admin user if not exists
+  // Seed admin user if not exists (as Super Admin)
   const adminBroker = brokers[0]
   const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12)
 
@@ -184,11 +184,13 @@ async function main() {
     update: {
       passwordHash,
       isActive: true,
+      isSuperAdmin: true,
     },
     create: {
       username: ADMIN_USERNAME,
       passwordHash,
       role: UserRole.ADMIN,
+      isSuperAdmin: true,
       teamName: ADMIN_TEAM_NAME,
       schoolOrigin: ADMIN_SCHOOL,
       brokerId: adminBroker.id,

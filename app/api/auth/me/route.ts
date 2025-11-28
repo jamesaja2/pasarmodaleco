@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
         id: user.id,
         username: user.username,
         role: user.role,
+        isSuperAdmin: user.isSuperAdmin ?? false,
         teamName: user.teamName,
         schoolOrigin: user.schoolOrigin,
         currentBalance: user.currentBalance,

@@ -5,10 +5,10 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
-import { LayoutGrid, Building2, Newspaper, Users, Calendar, FileText, Briefcase, Settings, LogOut, Menu, X, Clock } from 'lucide-react'
+import { LayoutGrid, Building2, Newspaper, Users, Calendar, FileText, Briefcase, Settings, LogOut, Menu, X, Clock, UserCog, Shield } from 'lucide-react'
 import { useSession } from '@/components/session-provider'
 
-const menuItems = [
+const baseMenuItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutGrid },
   { href: '/admin/companies', label: 'Perusahaan', icon: Building2 },
   { href: '/admin/news', label: 'Berita', icon: Newspaper },
@@ -16,6 +16,10 @@ const menuItems = [
   { href: '/admin/days', label: 'Kontrol Hari', icon: Calendar },
   { href: '/admin/transactions', label: 'Log Transaksi', icon: FileText },
   { href: '/admin/brokers', label: 'Broker', icon: Briefcase },
+]
+
+const superAdminMenuItems = [
+  { href: '/admin/admins', label: 'Kelola Admin', icon: UserCog },
   { href: '/admin/settings', label: 'Pengaturan', icon: Settings },
 ]
 
@@ -49,6 +53,13 @@ export default function AdminLayout({
 
   const activeHref = useMemo(() => pathname ?? '', [pathname])
 
+  // Combine menu items based on super admin status
+  const menuItems = useMemo(() => {
+    if (user?.isSuperAdmin) {
+      return [...baseMenuItems, ...superAdminMenuItems]
+    }
+    return baseMenuItems
+  }, [user?.isSuperAdmin])
   const handleLogout = async () => {
     await logout()
     router.replace('/login/admin')
@@ -119,9 +130,17 @@ export default function AdminLayout({
               {serverTime.toLocaleTimeString('id-ID')} WIB
             </div>
             {user && (
-              <div className="hidden sm:flex flex-col text-right text-xs text-gray-500">
-                <span className="font-semibold text-gray-700">{user.username}</span>
-                <span>Admin</span>
+              <div className="hidden sm:flex items-center gap-2">
+                {user.isSuperAdmin && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                    <Shield className="w-3 h-3" />
+                    Super Admin
+                  </span>
+                )}
+                <div className="flex flex-col text-right text-xs text-gray-500">
+                  <span className="font-semibold text-gray-700">{user.username}</span>
+                  <span>{user.isSuperAdmin ? 'Super Admin' : 'Admin'}</span>
+                </div>
               </div>
             )}
           </div>

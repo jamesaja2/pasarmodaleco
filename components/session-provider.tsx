@@ -23,6 +23,7 @@ type SessionUser = {
   broker: SessionBroker | null
   lastLogin?: string | null
   requiresBrokerSelection?: boolean
+  isSuperAdmin?: boolean
 }
 
 type LoginPayload = {

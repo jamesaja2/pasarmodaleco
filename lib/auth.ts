@@ -127,3 +127,11 @@ export async function requireAdmin(request?: NextRequest) {
   return user
 }
 
+export async function requireSuperAdmin(request?: NextRequest) {
+  const user = await requireAdmin(request)
+  if (!user.isSuperAdmin) {
+    throw new Error('FORBIDDEN')
+  }
+  return user
+}
+

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAdmin } from '@/lib/auth'
+import { requireSuperAdmin } from '@/lib/auth'
 import { z } from 'zod'
 
 function parseAllowedIps(value: unknown): string[] {
@@ -60,7 +60,7 @@ const updateSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin(request)
+    await requireSuperAdmin(request)
     const settings = await loadSettings()
     return NextResponse.json(settings)
   } catch (error) {
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     if (error instanceof Error && error.message === 'FORBIDDEN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Forbidden - Super Admin only' }, { status: 403 })
     }
     console.error('Failed to fetch settings', error)
     return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 })
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin(request)
+    await requireSuperAdmin(request)
     const json = await request.json()
     const payload = updateSchema.parse(json)
 
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     if (error instanceof Error && error.message === 'FORBIDDEN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ error: 'Forbidden - Super Admin only' }, { status: 403 })
     }
     console.error('Failed to update settings', error)
     return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 })
