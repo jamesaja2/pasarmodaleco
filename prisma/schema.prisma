@@ -30,6 +30,7 @@ model User {
   passwordHash    String
   role            UserRole                 @default(PARTICIPANT)
   isSuperAdmin    Boolean                  @default(false)
+  hasLoggedIn     Boolean                  @default(false)
   teamName        String?
   schoolOrigin    String?
   broker          Broker?                  @relation(fields: [brokerId], references: [id])

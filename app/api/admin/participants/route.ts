@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
       startingBalance: Number(participant.startingBalance),
       currentBalance: Number(participant.currentBalance),
       isActive: participant.isActive,
+      hasLoggedIn: participant.hasLoggedIn ?? false,
       createdAt: participant.createdAt,
       requiresBrokerSelection: !participant.brokerId,
     }))

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { Plus, Upload, Edit2, Trash2, Key, Loader2, RefreshCcw, FileDown, Copy, Check } from 'lucide-react'
+import { Plus, Upload, Edit2, Trash2, Key, Loader2, RefreshCcw, FileDown, Copy, Check, LogIn } from 'lucide-react'
 import { ParticipantForm, ParticipantFormValues } from '@/components/forms/participant-form'
 import { apiClient, ApiError } from '@/lib/api-client'
 import { useToast } from '@/hooks/use-toast'
@@ -21,6 +21,7 @@ type ParticipantItem = {
   startingBalance: number
   currentBalance: number
   isActive: boolean
+  hasLoggedIn: boolean
   requiresBrokerSelection: boolean
 }
 
@@ -42,6 +43,7 @@ export default function ParticipantsPage() {
   const [selectedParticipant, setSelectedParticipant] = useState<ParticipantItem | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [resettingId, setResettingId] = useState<string | null>(null)
+  const [resettingLoginId, setResettingLoginId] = useState<string | null>(null)
   const [exporting, setExporting] = useState(false)
   const [importing, setImporting] = useState(false)
   const [passwordDialog, setPasswordDialog] = useState<{ username: string; password: string } | null>(null)
@@ -64,6 +66,7 @@ export default function ParticipantsPage() {
         startingBalance: Number(item.startingBalance ?? 0),
         currentBalance: Number(item.currentBalance ?? 0),
         isActive: Boolean(item.isActive ?? true),
+        hasLoggedIn: Boolean(item.hasLoggedIn ?? false),
         requiresBrokerSelection: Boolean(item.requiresBrokerSelection ?? false),
       }))
       setParticipants(normalized)
@@ -192,6 +195,24 @@ export default function ParticipantsPage() {
       setCopied(true)
       toast({ title: 'Tersalin!', description: 'Password berhasil disalin ke clipboard.' })
       setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  const handleResetLogin = async (participant: ParticipantItem) => {
+    if (!confirm(`Reset status login untuk ${participant.username}? Peserta akan dapat login kembali.`)) {
+      return
+    }
+
+    setResettingLoginId(participant.id)
+    try {
+      await apiClient.post(`/admin/participants/${participant.id}/reset-login`, {})
+      toast({ title: 'Login berhasil direset', description: `${participant.username} dapat login kembali.` })
+      await fetchParticipants()
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Gagal reset login'
+      toast({ title: 'Gagal reset login', description: message, variant: 'destructive' })
+    } finally {
+      setResettingLoginId(null)
     }
   }
 
@@ -391,6 +412,7 @@ export default function ParticipantsPage() {
                     <th className="text-left py-3 px-4 font-semibold">Broker</th>
                     <th className="text-left py-3 px-4 font-semibold">Saldo Saat Ini</th>
                     <th className="text-center py-3 px-4 font-semibold">Status</th>
+                    <th className="text-center py-3 px-4 font-semibold">Login</th>
                     <th className="text-center py-3 px-4 font-semibold">Aksi</th>
                   </tr>
                 </thead>
@@ -409,11 +431,33 @@ export default function ParticipantsPage() {
                           {participant.isActive ? 'Aktif' : 'Nonaktif'}
                         </span>
                       </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${participant.hasLoggedIn ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                          {participant.hasLoggedIn ? 'Sudah Login' : 'Belum Login'}
+                        </span>
+                      </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center justify-center gap-2">
+                          {participant.hasLoggedIn && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-blue-600"
+                              title="Reset Login"
+                              onClick={() => handleResetLogin(participant)}
+                              disabled={resettingLoginId === participant.id}
+                            >
+                              {resettingLoginId === participant.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <LogIn className="w-4 h-4" />
+                              )}
+                            </Button>
+                          )}
                           <Button
                             size="sm"
                             variant="outline"
+                            title="Reset Password"
                             onClick={() => handleResetPassword(participant)}
                             disabled={resettingId === participant.id}
                           >
@@ -423,13 +467,14 @@ export default function ParticipantsPage() {
                               <Key className="w-4 h-4" />
                             )}
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => openEditDialog(participant)}>
+                          <Button size="sm" variant="outline" title="Edit" onClick={() => openEditDialog(participant)}>
                             <Edit2 className="w-4 h-4" />
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             className="text-red-600"
+                            title="Hapus"
                             onClick={() => handleDelete(participant)}
                             disabled={deletingId === participant.id}
                           >

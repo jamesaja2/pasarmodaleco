@@ -46,9 +46,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized role' }, { status: 403 })
     }
 
+    // Check if participant has already logged in before (one-time login restriction)
+    if (user.role === UserRole.PARTICIPANT && user.hasLoggedIn) {
+      return NextResponse.json({ 
+        error: 'Akun ini sudah pernah login sebelumnya. Hubungi admin untuk reset login.' 
+      }, { status: 403 })
+    }
+
     await prisma.user.update({
       where: { id: user.id },
-      data: { lastLogin: new Date() },
+      data: { 
+        lastLogin: new Date(),
+        hasLoggedIn: user.role === UserRole.PARTICIPANT ? true : user.hasLoggedIn,
+      },
     })
 
     const token = await createSessionToken({
