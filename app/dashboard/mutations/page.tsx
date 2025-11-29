@@ -301,7 +301,7 @@ export default function MutationsPage() {
                         {mutation.details.stockCode && (
                           <p>
                             Saham: <span className="font-semibold text-emerald-600">{mutation.details.stockCode}</span>
-                            {mutation.details.quantity && ` • ${mutation.details.quantity} lot`}
+                            {mutation.details.quantity && ` • ${mutation.details.quantity} lembar`}
                             {mutation.details.pricePerShare && ` @ ${formatCurrency(mutation.details.pricePerShare)}`}
                           </p>
                         )}

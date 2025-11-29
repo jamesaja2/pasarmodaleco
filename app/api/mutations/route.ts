@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
         id: tx.id,
         type: isBuy ? 'TRANSACTION_BUY' : 'TRANSACTION_SELL',
         dayNumber: tx.dayNumber,
-        description: `${isBuy ? 'Beli' : 'Jual'} ${tx.quantity} lot ${tx.company.stockCode}`,
+        description: `${isBuy ? 'Beli' : 'Jual'} ${tx.quantity} lembar ${tx.company.stockCode}`,
         amount,
         balanceBefore: Number(tx.balanceBefore),
         balanceAfter: Number(tx.balanceAfter),

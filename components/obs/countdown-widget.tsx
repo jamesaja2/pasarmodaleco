@@ -15,6 +15,8 @@ type SchedulerStatus = {
   enabled: boolean
   intervalMinutes: number | null
   nextRunAt: string | null
+  isPaused?: boolean
+  remainingMs?: number | null
 }
 
 type CountdownState = {
@@ -127,6 +129,23 @@ export function CountdownWidget() {
   }, [fetchDay, fetchSchedule, subscribe])
 
   const countdown: CountdownState | null = useMemo(() => {
+    // When paused, show remaining time frozen
+    if (schedule?.isPaused && schedule.remainingMs) {
+      const clamped = Math.max(schedule.remainingMs, 0)
+      const hours = Math.floor(clamped / 3_600_000)
+      const minutes = Math.floor((clamped % 3_600_000) / 60_000)
+      const seconds = Math.floor((clamped % 60_000) / 1000)
+
+      const pad = (value: number) => value.toString().padStart(2, '0')
+
+      return {
+        hours: pad(hours),
+        minutes: pad(minutes),
+        seconds: pad(seconds),
+        totalMs: clamped,
+      }
+    }
+    
     if (!schedule?.enabled || !schedule.nextRunAt) {
       return null
     }
@@ -149,7 +168,7 @@ export function CountdownWidget() {
       seconds: pad(seconds),
       totalMs,
     }
-  }, [now, schedule?.enabled, schedule?.nextRunAt])
+  }, [now, schedule?.enabled, schedule?.nextRunAt, schedule?.isPaused, schedule?.remainingMs])
 
   const currentTimeLabel = useMemo(() => {
     return new Intl.DateTimeFormat('id-ID', {
@@ -198,16 +217,20 @@ export function CountdownWidget() {
             <p className="text-lg text-red-400">{errorMessage}</p>
           ) : countdown ? (
             <div className="space-y-6">
-              <p className="text-sm uppercase tracking-[0.5em] text-slate-400">Menuju Hari Berikutnya</p>
-              <div className="flex items-center justify-center gap-6 text-[clamp(3rem,12vw,8rem)] font-black">
+              <p className="text-sm uppercase tracking-[0.5em] text-slate-400">
+                {schedule?.isPaused ? '⏸️ COUNTDOWN PAUSED' : 'Menuju Hari Berikutnya'}
+              </p>
+              <div className={`flex items-center justify-center gap-6 text-[clamp(3rem,12vw,8rem)] font-black ${schedule?.isPaused ? 'text-orange-400 animate-pulse' : ''}`}>
                 <span>{countdown.hours}</span>
-                <span className="text-emerald-400">:</span>
+                <span className={schedule?.isPaused ? 'text-orange-300' : 'text-emerald-400'}>:</span>
                 <span>{countdown.minutes}</span>
-                <span className="text-emerald-400">:</span>
+                <span className={schedule?.isPaused ? 'text-orange-300' : 'text-emerald-400'}>:</span>
                 <span>{countdown.seconds}</span>
               </div>
               <p className="text-sm text-slate-300">
-                {countdown.totalMs > 0
+                {schedule?.isPaused
+                  ? 'Countdown sedang di-pause oleh admin. Waktu akan dilanjutkan saat di-resume.'
+                  : countdown.totalMs > 0
                   ? 'Otomatisasi aktif. Bersiaplah untuk pembukaan hari selanjutnya.'
                   : 'Waktu habis. Sistem siap berganti atau menunggu pemicu berikutnya.'}
               </p>
@@ -227,7 +250,17 @@ export function CountdownWidget() {
         <footer className="flex w-full flex-col items-center gap-4 text-center text-sm text-slate-400 md:flex-row md:justify-between md:text-left">
           <div>
             <span className="font-semibold text-slate-200">Status:</span>{' '}
-            {day ? (day.isSimulationActive ? 'Simulasi aktif' : 'Simulasi nonaktif') : 'Tidak diketahui'}
+            {day ? (
+              schedule?.isPaused ? (
+                <span className="text-orange-400 font-semibold">⏸️ Paused</span>
+              ) : day.isSimulationActive ? (
+                'Simulasi aktif'
+              ) : (
+                'Simulasi nonaktif'
+              )
+            ) : (
+              'Tidak diketahui'
+            )}
           </div>
           <div>
             <span className="font-semibold text-slate-200">Terakhir berubah:</span>{' '}

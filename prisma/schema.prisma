@@ -168,6 +168,9 @@ model DayControl {
   currentDay          Int      @default(0)
   totalDays           Int      @default(15)
   isSimulationActive  Boolean  @default(false)
+  isPaused            Boolean  @default(false)
+  pausedAt            DateTime?
+  remainingMs         Int?     // Remaining milliseconds when paused
   simulationStartDate DateTime?
   lastDayChange       DateTime?
   createdAt           DateTime @default(now())

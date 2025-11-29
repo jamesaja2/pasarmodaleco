@@ -203,14 +203,62 @@ export async function ensureSchedulerInitialized() {
   await getInitPromise()
 }
 
+/**
+ * Get current scheduler status including next run time
+ */
+export function getSchedulerStatus() {
+  const state = getState()
+  return {
+    enabled: state.enabled,
+    intervalMs: state.intervalMs,
+    nextRunAt: state.nextRunAt,
+    running: state.running,
+  }
+}
+
+/**
+ * Pause the scheduler - stop the timer but keep state
+ */
+export function pauseScheduler() {
+  const state = getState()
+  clearTimer(state)
+  // Don't disable - just pause
+}
+
+/**
+ * Resume the scheduler with remaining time
+ */
+export function resumeScheduler(remainingMs: number) {
+  const state = getState()
+  if (!state.enabled || !state.intervalMs) {
+    return
+  }
+  
+  clearTimer(state)
+  state.nextRunAt = Date.now() + remainingMs
+  state.timer = setTimeout(() => {
+    runTick(state).catch((error) => {
+      console.error('[auto-day] Tick failed', error)
+    })
+  }, remainingMs)
+}
+
 export async function getAutoDayStatus() {
   await ensureSchedulerInitialized()
   const state = getState()
   const intervalMinutes = state.intervalMs ? Math.round(state.intervalMs / 60_000) : null
+  
+  // Check if paused in database
+  const control = await prisma.dayControl.findUnique({ where: { id: 'day-control-singleton' } })
+  const isPaused = control?.isPaused ?? false
+  const remainingMs = control?.remainingMs ?? null
+  
   return {
     enabled: state.enabled,
     intervalMinutes,
     nextRunAt: state.nextRunAt ? new Date(state.nextRunAt).toISOString() : null,
+    isPaused,
+    remainingMs,
   }
 }
 

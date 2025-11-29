@@ -13,6 +13,8 @@ type SimulationStatus = {
   currentDay: number
   totalDays: number
   isSimulationActive: boolean
+  isPaused?: boolean
+  remainingMs?: number | null
   simulationStartDate?: string | null
   lastDayChange?: string | null
 }
@@ -27,7 +29,7 @@ export default function DaysControlPage() {
   const { toast } = useToast()
   const [status, setStatus] = useState<SimulationStatus | null>(null)
   const [loading, setLoading] = useState(true)
-  const [action, setAction] = useState<'start' | 'next' | 'end' | 'reset' | null>(null)
+  const [action, setAction] = useState<'start' | 'next' | 'end' | 'reset' | 'pause' | 'resume' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [autoStatus, setAutoStatus] = useState<AutoSchedulerStatus | null>(null)
   const [autoLoading, setAutoLoading] = useState(true)
@@ -71,7 +73,7 @@ export default function DaysControlPage() {
     fetchAutoStatus().catch(() => null)
   }, [fetchStatus, fetchAutoStatus])
 
-  const handleAction = useCallback(async (type: 'start' | 'next' | 'end' | 'reset') => {
+  const handleAction = useCallback(async (type: 'start' | 'next' | 'end' | 'reset' | 'pause' | 'resume') => {
     setAction(type)
     setError(null)
     try {
@@ -90,6 +92,13 @@ export default function DaysControlPage() {
           title: 'Simulasi direset',
           description: 'Seluruh data transaksi dan kepemilikan telah dikembalikan ke kondisi awal.',
         })
+      } else if (type === 'pause') {
+        await apiClient.post('/admin/days/pause', {})
+        toast({ title: 'Simulasi di-pause', description: 'Countdown hari berhenti sementara.' })
+      } else if (type === 'resume') {
+        await apiClient.post('/admin/days/resume', {})
+        toast({ title: 'Simulasi dilanjutkan', description: 'Countdown hari berjalan kembali.' })
+      }
       }
 
       await fetchStatus()
@@ -307,7 +316,7 @@ export default function DaysControlPage() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -335,6 +344,51 @@ export default function DaysControlPage() {
                 </Button>
                 <p className="text-xs text-gray-500">
                   Tombol ini aktif saat simulasi berjalan dan belum mencapai hari terakhir.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  {status?.isPaused ? (
+                    <Play className="w-5 h-5 text-blue-600" />
+                  ) : (
+                    <Pause className="w-5 h-5 text-orange-600" />
+                  )}
+                  {status?.isPaused ? 'Lanjutkan Countdown' : 'Pause Countdown'}
+                </CardTitle>
+                <CardDescription>
+                  {status?.isPaused 
+                    ? `Countdown sedang di-pause. Sisa waktu: ${Math.floor((status?.remainingMs || 0) / 60000)} menit`
+                    : 'Hentikan countdown sementara untuk OBS sync'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {status?.isPaused && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 flex gap-3">
+                    <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0" />
+                    <p className="text-sm text-orange-700">
+                      Countdown sedang di-pause. OBS timer juga berhenti.
+                    </p>
+                  </div>
+                )}
+                <Button
+                  onClick={() => handleAction(status?.isPaused ? 'resume' : 'pause')}
+                  disabled={!simulationActive || action !== null}
+                  className={`w-full ${status?.isPaused ? 'bg-blue-600 hover:bg-blue-700' : 'bg-orange-600 hover:bg-orange-700'}`}
+                >
+                  {action === 'pause' || action === 'resume' ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : status?.isPaused ? (
+                    <Play className="w-4 h-4 mr-2" />
+                  ) : (
+                    <Pause className="w-4 h-4 mr-2" />
+                  )}
+                  {status?.isPaused ? 'Resume Countdown' : 'Pause Countdown'}
+                </Button>
+                <p className="text-xs text-gray-500">
+                  Gunakan ini untuk menghentikan countdown sementara tanpa mengakhiri simulasi.
                 </p>
               </CardContent>
             </Card>

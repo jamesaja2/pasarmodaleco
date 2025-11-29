@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
       currentDay: dayControl?.currentDay ?? 0,
       totalDays: dayControl?.totalDays ?? 15,
       isSimulationActive: dayControl?.isSimulationActive ?? false,
+      isPaused: dayControl?.isPaused ?? false,
+      remainingMs: dayControl?.remainingMs ?? null,
       simulationStartDate: dayControl?.simulationStartDate,
       lastDayChange: dayControl?.lastDayChange,
     })
