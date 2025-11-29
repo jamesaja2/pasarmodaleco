@@ -23,8 +23,15 @@ export async function GET(request: NextRequest) {
       orderBy: { stockCode: 'asc' },
     })
 
+    // Convert BigInt and Decimal to serializable types
+    const serializedCompanies = companies.map((company) => ({
+      ...company,
+      sellingPrice: company.sellingPrice ? Number(company.sellingPrice) : null,
+      sharesOutstanding: company.sharesOutstanding ? Number(company.sharesOutstanding) : null,
+    }))
+
     return NextResponse.json({
-      companies,
+      companies: serializedCompanies,
       total: companies.length,
     })
   } catch (error: unknown) {
