@@ -111,9 +111,8 @@ export default function DashboardLayout({
   const activeHref = useMemo(() => pathname ?? '', [pathname])
 
   const handleLogout = async () => {
-    await logout()
-    // Redirect to SEB quit link to close Safe Exam Browser
-    window.location.href = 'sebs://quit'
+    // Redirect to logout page which handles SEB quit
+    router.replace('/logout')
   }
 
   return (
