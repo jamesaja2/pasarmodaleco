@@ -5,11 +5,13 @@ import { requireAdmin } from '@/lib/auth'
 import { getCache, CACHE_KEYS } from '@/lib/cache'
 
 const updateSchema = z.object({
+  stockCode: z.string().optional(),
   companyName: z.string().min(3).optional(),
   sector: z.string().min(3).optional(),
   description: z.string().optional(),
   location: z.string().optional(),
   logoUrl: z.string().url().optional().or(z.literal('')),
+  startingPrice: z.number().positive().optional().nullable(),
   sellingPrice: z.string().optional().nullable(),
   sharesOutstanding: z.number().int().positive().optional().nullable(),
 })
