@@ -31,7 +31,13 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
     const cache = await getCache()
     await cache.del(CACHE_KEYS.COMPANIES)
 
-    return NextResponse.json({ success: true, company })
+    // Convert BigInt to Number for JSON serialization
+    const serializedCompany = {
+      ...company,
+      sharesOutstanding: company.sharesOutstanding ? Number(company.sharesOutstanding) : null,
+    }
+
+    return NextResponse.json({ success: true, company: serializedCompany })
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message ?? 'Invalid payload' }, { status: 400 })
