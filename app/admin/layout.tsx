@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
-import { LayoutGrid, Building2, Newspaper, Users, Calendar, FileText, Briefcase, Settings, LogOut, Menu, X, Clock, UserCog, Shield } from 'lucide-react'
+import { LayoutGrid, Building2, Newspaper, Users, Calendar, FileText, Briefcase, Settings, LogOut, Menu, X, Clock, UserCog, Shield, Upload } from 'lucide-react'
 import { useSession } from '@/components/session-provider'
 
 const baseMenuItems = [
@@ -16,6 +16,7 @@ const baseMenuItems = [
   { href: '/admin/days', label: 'Kontrol Hari', icon: Calendar },
   { href: '/admin/transactions', label: 'Log Transaksi', icon: FileText },
   { href: '/admin/brokers', label: 'Broker', icon: Briefcase },
+  { href: '/admin/assets', label: 'Upload Asset', icon: Upload },
 ]
 
 const superAdminMenuItems = [

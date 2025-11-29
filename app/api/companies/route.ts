@@ -55,6 +55,8 @@ export async function GET(request: NextRequest) {
         description: company.description,
         location: company.location,
         logoUrl: company.logoUrl,
+        sellingPrice: company.sellingPrice ? Number(company.sellingPrice) : null,
+        sharesOutstanding: company.sharesOutstanding ? Number(company.sharesOutstanding) : null,
       })),
       total: companies.length,
     }

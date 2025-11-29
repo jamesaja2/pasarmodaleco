@@ -22,6 +22,8 @@ type CompanyItem = {
   location: string
   description: string
   logoUrl: string | null
+  sellingPrice: number | null
+  sharesOutstanding: number | null
 }
 
 type PriceEntry = {
@@ -78,6 +80,8 @@ export default function CompaniesPage() {
         location: String(item.location ?? ''),
         description: String(item.description ?? ''),
         logoUrl: item.logoUrl ?? null,
+        sellingPrice: item.sellingPrice != null ? Number(item.sellingPrice) : null,
+        sharesOutstanding: item.sharesOutstanding != null ? Number(item.sharesOutstanding) : null,
       }))
       setCompanies(normalized)
     } catch (err) {
@@ -193,6 +197,8 @@ export default function CompaniesPage() {
           location: values.location,
           description: values.description || undefined,
           logoUrl: values.logoUrl || undefined,
+          sellingPrice: values.sellingPrice,
+          sharesOutstanding: values.sharesOutstanding,
         })
 
         if (values.startingPrice) {
@@ -212,6 +218,8 @@ export default function CompaniesPage() {
           description: values.description || undefined,
           location: values.location || undefined,
           logoUrl: values.logoUrl || undefined,
+          sellingPrice: values.sellingPrice,
+          sharesOutstanding: values.sharesOutstanding,
         })
 
         const createdCompany = response.company
@@ -459,6 +467,8 @@ export default function CompaniesPage() {
               description: selectedCompany.description,
               logoUrl: selectedCompany.logoUrl ?? '',
               startingPrice: null,
+              sellingPrice: selectedCompany.sellingPrice,
+              sharesOutstanding: selectedCompany.sharesOutstanding,
             } : undefined}
             onSubmit={handleSubmit}
             onCancel={closeDialog}

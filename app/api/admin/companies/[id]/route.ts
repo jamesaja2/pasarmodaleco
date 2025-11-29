@@ -9,7 +9,9 @@ const updateSchema = z.object({
   sector: z.string().min(3).optional(),
   description: z.string().optional(),
   location: z.string().optional(),
-  logoUrl: z.string().url().optional(),
+  logoUrl: z.string().url().optional().or(z.literal('')),
+  sellingPrice: z.number().positive().optional().nullable(),
+  sharesOutstanding: z.number().int().positive().optional().nullable(),
 })
 
 export async function PUT(request: NextRequest, context: { params: Promise<{ id: string }> }) {

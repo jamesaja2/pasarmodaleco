@@ -65,20 +65,22 @@ model Broker {
 }
 
 model Company {
-  id          String        @id @default(uuid())
-  stockCode   String        @unique
-  companyName String
-  sector      String
-  description String?
-  location    String?
-  logoUrl     String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  prices      StockPrice[]
-  reports     FinancialReport[]
-  news        News[]
-  portfolio   PortfolioHolding[]
-  transactions Transaction[]
+  id                String        @id @default(uuid())
+  stockCode         String        @unique
+  companyName       String
+  sector            String
+  description       String?
+  location          String?
+  logoUrl           String?
+  sellingPrice      Decimal?      @db.Decimal(20, 2)  // Nilai Jual
+  sharesOutstanding BigInt?       // Jumlah saham beredar
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  prices            StockPrice[]
+  reports           FinancialReport[]
+  news              News[]
+  portfolio         PortfolioHolding[]
+  transactions      Transaction[]
 }
 
 model StockPrice {

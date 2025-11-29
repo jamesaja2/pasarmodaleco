@@ -10,7 +10,9 @@ const companySchema = z.object({
   sector: z.string().min(3),
   description: z.string().optional(),
   location: z.string().optional(),
-  logoUrl: z.string().url().optional(),
+  logoUrl: z.string().url().optional().or(z.literal('')),
+  sellingPrice: z.number().positive().optional().nullable(),
+  sharesOutstanding: z.number().int().positive().optional().nullable(),
 })
 
 export async function GET(request: NextRequest) {
@@ -50,7 +52,9 @@ export async function POST(request: NextRequest) {
         sector: data.sector,
         description: data.description,
         location: data.location,
-        logoUrl: data.logoUrl,
+        logoUrl: data.logoUrl || null,
+        sellingPrice: data.sellingPrice ?? null,
+        sharesOutstanding: data.sharesOutstanding ?? null,
       },
     })
 

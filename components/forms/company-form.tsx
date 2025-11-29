@@ -14,6 +14,8 @@ type FormState = {
   description: string
   logoUrl: string
   startingPrice: string
+  sellingPrice: string
+  sharesOutstanding: string
 }
 
 export type CompanyFormValues = {
@@ -24,6 +26,8 @@ export type CompanyFormValues = {
   description: string
   logoUrl: string
   startingPrice: number | null
+  sellingPrice: number | null
+  sharesOutstanding: number | null
 }
 
 interface CompanyFormProps {
@@ -35,6 +39,8 @@ interface CompanyFormProps {
     description: string
     logoUrl: string
     startingPrice: number | null
+    sellingPrice: number | null
+    sharesOutstanding: number | null
   }
   onSubmit: (data: CompanyFormValues) => void
   onCancel: () => void
@@ -49,6 +55,8 @@ const INITIAL_STATE: FormState = {
   description: '',
   logoUrl: '',
   startingPrice: '',
+  sellingPrice: '',
+  sharesOutstanding: '',
 }
 
 export function CompanyForm({ initialData, onSubmit, onCancel, isLoading }: CompanyFormProps) {
@@ -63,6 +71,14 @@ export function CompanyForm({ initialData, onSubmit, onCancel, isLoading }: Comp
       initialData?.startingPrice != null && Number.isFinite(initialData.startingPrice)
         ? String(initialData.startingPrice)
         : INITIAL_STATE.startingPrice,
+    sellingPrice:
+      initialData?.sellingPrice != null && Number.isFinite(initialData.sellingPrice)
+        ? String(initialData.sellingPrice)
+        : INITIAL_STATE.sellingPrice,
+    sharesOutstanding:
+      initialData?.sharesOutstanding != null && Number.isFinite(initialData.sharesOutstanding)
+        ? String(initialData.sharesOutstanding)
+        : INITIAL_STATE.sharesOutstanding,
   }))
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -90,6 +106,18 @@ export function CompanyForm({ initialData, onSubmit, onCancel, isLoading }: Comp
         newErrors.startingPrice = 'Harga awal harus lebih dari 0'
       }
     }
+    if (formData.sellingPrice) {
+      const priceValue = Number(formData.sellingPrice)
+      if (!Number.isFinite(priceValue) || priceValue <= 0) {
+        newErrors.sellingPrice = 'Nilai jual harus lebih dari 0'
+      }
+    }
+    if (formData.sharesOutstanding) {
+      const sharesValue = Number(formData.sharesOutstanding)
+      if (!Number.isFinite(sharesValue) || sharesValue <= 0 || !Number.isInteger(sharesValue)) {
+        newErrors.sharesOutstanding = 'Jumlah saham beredar harus bilangan bulat positif'
+      }
+    }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -107,6 +135,8 @@ export function CompanyForm({ initialData, onSubmit, onCancel, isLoading }: Comp
       description: formData.description.trim(),
       logoUrl: formData.logoUrl.trim(),
       startingPrice: formData.startingPrice ? Number(formData.startingPrice) : null,
+      sellingPrice: formData.sellingPrice ? Number(formData.sellingPrice) : null,
+      sharesOutstanding: formData.sharesOutstanding ? Number(formData.sharesOutstanding) : null,
     }
 
     onSubmit(payload)
@@ -148,6 +178,41 @@ export function CompanyForm({ initialData, onSubmit, onCancel, isLoading }: Comp
                 min="0"
               />
               {errors.startingPrice && <p className="text-xs text-red-600 mt-1">{errors.startingPrice}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Nilai Jual (Rp)</label>
+              <Input
+                type="number"
+                value={formData.sellingPrice}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, sellingPrice: e.target.value }))
+                }
+                placeholder="10000"
+                className={errors.sellingPrice ? 'border-red-500' : ''}
+                min="0"
+              />
+              {errors.sellingPrice && <p className="text-xs text-red-600 mt-1">{errors.sellingPrice}</p>}
+              <p className="text-xs text-gray-500 mt-1">Harga jual untuk valuasi perusahaan</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Jumlah Saham Beredar</label>
+              <Input
+                type="number"
+                value={formData.sharesOutstanding}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, sharesOutstanding: e.target.value }))
+                }
+                placeholder="1000000"
+                className={errors.sharesOutstanding ? 'border-red-500' : ''}
+                min="1"
+                step="1"
+              />
+              {errors.sharesOutstanding && <p className="text-xs text-red-600 mt-1">{errors.sharesOutstanding}</p>}
+              <p className="text-xs text-gray-500 mt-1">Total lembar saham yang beredar</p>
             </div>
           </div>
 
