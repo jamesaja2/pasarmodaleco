@@ -99,7 +99,6 @@ export default function DaysControlPage() {
         await apiClient.post('/admin/days/resume', {})
         toast({ title: 'Simulasi dilanjutkan', description: 'Countdown hari berjalan kembali.' })
       }
-      }
 
       await fetchStatus()
       await fetchAutoStatus()
