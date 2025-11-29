@@ -16,6 +16,8 @@ type SettingsState = {
   ipRestrictionEnabled: boolean
   startingBalance: number
   totalDays: number
+  maxPaidNewsPerDay: number
+  paidNewsPrice: number
 }
 
 export default function SettingsPage() {
@@ -40,6 +42,8 @@ export default function SettingsPage() {
         ipRestrictionEnabled: data.ipRestrictionEnabled ?? false,
         startingBalance: data.startingBalance ?? 0,
         totalDays: data.totalDays ?? 0,
+        maxPaidNewsPerDay: data.maxPaidNewsPerDay ?? 5,
+        paidNewsPrice: data.paidNewsPrice ?? 500000,
       })
     } catch (err) {
       const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Gagal memuat pengaturan'
@@ -118,6 +122,8 @@ export default function SettingsPage() {
       await apiClient.post('/admin/settings', {
         totalDays: Number(settings.totalDays),
         startingBalance: Number(settings.startingBalance),
+        maxPaidNewsPerDay: Number(settings.maxPaidNewsPerDay),
+        paidNewsPrice: Number(settings.paidNewsPrice),
       })
       toast({ title: 'Parameter disimpan', description: 'Total hari dan saldo awal berhasil diperbarui.' })
       await fetchSettings()
@@ -298,6 +304,31 @@ export default function SettingsPage() {
                     value={settings.startingBalance}
                     onChange={(e) => setSettings({ ...settings, startingBalance: Number(e.target.value) })}
                   />
+                </div>
+                <div className="space-y-2">
+                  <label className="font-semibold text-sm">Maks Berita Berbayar / Hari</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={settings.maxPaidNewsPerDay}
+                    onChange={(e) => setSettings({ ...settings, maxPaidNewsPerDay: Number(e.target.value) })}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Jumlah maksimal berita berbayar yang bisa dibeli peserta per hari.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <label className="font-semibold text-sm">Harga Berita Berbayar</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="50000"
+                    value={settings.paidNewsPrice}
+                    onChange={(e) => setSettings({ ...settings, paidNewsPrice: Number(e.target.value) })}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Harga per berita berbayar (Rp).
+                  </p>
                 </div>
               </div>
               <p className="text-xs text-gray-500">

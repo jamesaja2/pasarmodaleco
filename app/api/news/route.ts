@@ -9,6 +9,15 @@ const querySchema = z.object({
   sort: z.enum(['latest', 'oldest']).optional(),
 })
 
+function toNumber(value: unknown): number {
+  if (typeof value === 'number') return value
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    return Number.isNaN(parsed) ? 0 : parsed
+  }
+  return 0
+}
+
 export async function GET(request: NextRequest) {
   try {
     const user = await requireUser(request)
@@ -32,6 +41,12 @@ export async function GET(request: NextRequest) {
     })
     const currentDay = dayControl?.currentDay ?? 0
     const isSimulationActive = dayControl?.isSimulationActive ?? false
+
+    // Get paid news settings
+    const paidNewsPriceSetting = await prisma.setting.findUnique({ 
+      where: { key: 'paid_news_price' } 
+    })
+    const paidNewsPrice = toNumber(paidNewsPriceSetting?.value ?? 500000)
 
     // For participants: only show news if simulation is active and dayNumber <= currentDay
     // For admins: show all news
@@ -59,19 +74,27 @@ export async function GET(request: NextRequest) {
     })
 
     const payload = {
-      news: newsList.map((item) => ({
-        id: item.id,
-        title: item.title,
-        preview: item.content.slice(0, 160) + (item.content.length > 160 ? '...' : ''),
-        dayNumber: item.dayNumber,
-        isPaid: item.isPaid,
-        price: item.price ? Number(item.price) : null,
-        companyCode: item.company?.stockCode ?? null,
-        publishedAt: item.publishedAt,
-        isPurchased:
-          user.role === 'ADMIN' ? true : Array.isArray(item.purchases) ? item.purchases.length > 0 : false,
-      })),
+      news: newsList.map((item) => {
+        const isPurchased = user.role === 'ADMIN' ? true : Array.isArray(item.purchases) ? item.purchases.length > 0 : false
+        
+        // For paid news that hasn't been purchased by participant, hide the title and content
+        const hidePaidContent = user.role === 'PARTICIPANT' && item.isPaid && !isPurchased
+        
+        return {
+          id: item.id,
+          title: hidePaidContent ? 'Berita Berbayar' : item.title,
+          preview: hidePaidContent ? 'Beli berita ini untuk melihat isinya. Anda akan mendapatkan berita acak dari pool berita berbayar hari ini.' : (item.content.slice(0, 160) + (item.content.length > 160 ? '...' : '')),
+          dayNumber: item.dayNumber,
+          isPaid: item.isPaid,
+          price: item.isPaid ? paidNewsPrice : null,
+          companyCode: hidePaidContent ? null : (item.company?.stockCode ?? null),
+          publishedAt: item.publishedAt,
+          isPurchased,
+          isHidden: hidePaidContent,
+        }
+      }),
       total: newsList.length,
+      paidNewsPrice,
     }
 
     return NextResponse.json(payload)

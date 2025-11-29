@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Lock, DollarSign, CheckCircle, RefreshCcw, Newspaper, Calendar, Building2, X } from 'lucide-react'
+import { Lock, DollarSign, CheckCircle, RefreshCcw, Newspaper, Calendar, Building2, X, Shuffle } from 'lucide-react'
 import { apiClient, ApiError } from '@/lib/api-client'
 import { useSession } from '@/components/session-provider'
 
@@ -28,6 +28,16 @@ type NewsItem = {
   companyCode: string | null
   publishedAt: string
   isPurchased: boolean
+  isHidden?: boolean
+}
+
+type PaidNewsStatus = {
+  currentDay: number
+  maxPaidNewsPerDay: number
+  paidNewsPrice: number
+  purchasedToday: number
+  remainingPurchases: number
+  availableNews: number
 }
 
 function formatDate(date: string) {
@@ -54,7 +64,7 @@ function formatShortDate(date: string) {
 }
 
 export default function NewsPage() {
-  const { user } = useSession()
+  const { user, refresh } = useSession()
   const [filter, setFilter] = useState<NewsFilter>('all')
   const [newsItems, setNewsItems] = useState<NewsItem[]>([])
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null)
@@ -63,6 +73,17 @@ export default function NewsPage() {
   const [error, setError] = useState<string | null>(null)
   const [purchaseLoading, setPurchaseLoading] = useState<string | null>(null)
   const [contentLoading, setContentLoading] = useState(false)
+  const [paidNewsStatus, setPaidNewsStatus] = useState<PaidNewsStatus | null>(null)
+  const [randomPurchaseLoading, setRandomPurchaseLoading] = useState(false)
+
+  const fetchPaidNewsStatus = useCallback(async () => {
+    try {
+      const status = await apiClient.get<PaidNewsStatus>('/news/purchase-random')
+      setPaidNewsStatus(status)
+    } catch {
+      // Ignore errors for status fetch
+    }
+  }, [])
 
   const fetchNews = useCallback(async (currentFilter: NewsFilter) => {
     setLoading(true)
@@ -80,6 +101,7 @@ export default function NewsPage() {
         companyCode: item.companyCode ?? null,
         publishedAt: item.publishedAt ?? new Date().toISOString(),
         isPurchased: Boolean(item.isPurchased),
+        isHidden: Boolean(item.isHidden),
       }))
       setNewsItems(normalized)
     } catch (err) {
@@ -92,10 +114,51 @@ export default function NewsPage() {
 
   useEffect(() => {
     fetchNews(filter).catch(() => null)
-  }, [fetchNews, filter])
+    fetchPaidNewsStatus().catch(() => null)
+  }, [fetchNews, fetchPaidNewsStatus, filter])
+
+  // Handle random paid news purchase
+  const handleRandomPurchase = useCallback(async () => {
+    if (!user || user.role !== 'PARTICIPANT') return
+    setRandomPurchaseLoading(true)
+    setError(null)
+    try {
+      const result = await apiClient.post<{ news: any; remainingPurchases: number }>('/news/purchase-random')
+      // Refresh news list and status
+      await Promise.all([fetchNews(filter), fetchPaidNewsStatus(), refresh()])
+      // Show the purchased news
+      if (result.news) {
+        const purchasedNews: NewsItem = {
+          id: result.news.id,
+          title: result.news.title,
+          preview: '',
+          content: result.news.content,
+          dayNumber: result.news.dayNumber,
+          isPaid: true,
+          price: paidNewsStatus?.paidNewsPrice ?? 0,
+          companyCode: null,
+          publishedAt: new Date().toISOString(),
+          isPurchased: true,
+          isHidden: false,
+        }
+        setSelectedNews(purchasedNews)
+        setDialogOpen(true)
+      }
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Gagal membeli berita'
+      setError(message)
+    } finally {
+      setRandomPurchaseLoading(false)
+    }
+  }, [user, filter, fetchNews, fetchPaidNewsStatus, refresh, paidNewsStatus])
 
   const handleOpenNews = useCallback(
     async (item: NewsItem) => {
+      // For hidden paid news, don't open dialog - use random purchase instead
+      if (item.isHidden) {
+        return
+      }
+      
       setSelectedNews(item)
       setDialogOpen(true)
 
@@ -181,6 +244,38 @@ export default function NewsPage() {
         </Card>
       )}
 
+      {/* Paid News Purchase Card */}
+      {paidNewsStatus && paidNewsStatus.remainingPurchases > 0 && paidNewsStatus.availableNews > 0 && (
+        <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50">
+          <CardContent className="py-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                  <Shuffle className="w-6 h-6 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-amber-900">Berita Berbayar</h3>
+                  <p className="text-sm text-amber-700">
+                    Sisa pembelian hari ini: <span className="font-bold">{paidNewsStatus.remainingPurchases}</span> dari {paidNewsStatus.maxPaidNewsPerDay}
+                  </p>
+                  <p className="text-xs text-amber-600">
+                    Tersedia {paidNewsStatus.availableNews} berita • Harga: Rp {paidNewsStatus.paidNewsPrice.toLocaleString('id-ID')}
+                  </p>
+                </div>
+              </div>
+              <Button
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+                onClick={handleRandomPurchase}
+                disabled={randomPurchaseLoading}
+              >
+                <Shuffle className="w-4 h-4 mr-2" />
+                {randomPurchaseLoading ? 'Membeli...' : 'Beli Berita Acak'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* News Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading && !filteredNews.length && (
@@ -198,17 +293,17 @@ export default function NewsPage() {
         {filteredNews.map((item) => (
           <Card
             key={item.id}
-            className="hover:shadow-lg transition-all cursor-pointer group overflow-hidden"
-            onClick={() => handleOpenNews(item)}
+            className={`hover:shadow-lg transition-all cursor-pointer group overflow-hidden ${item.isHidden ? 'opacity-75' : ''}`}
+            onClick={() => item.isHidden ? handleRandomPurchase() : handleOpenNews(item)}
           >
             {/* News Card Header with gradient */}
-            <div className="h-24 bg-gradient-to-br from-emerald-500 to-teal-600 relative">
+            <div className={`h-24 relative ${item.isHidden ? 'bg-gradient-to-br from-amber-500 to-orange-600' : 'bg-gradient-to-br from-emerald-500 to-teal-600'}`}>
               <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                <Newspaper className="w-16 h-16 text-white" />
+                {item.isHidden ? <Lock className="w-16 h-16 text-white" /> : <Newspaper className="w-16 h-16 text-white" />}
               </div>
               {/* Badges */}
               <div className="absolute top-2 left-2 flex gap-1">
-                {item.companyCode && (
+                {item.companyCode && !item.isHidden && (
                   <Badge className="bg-white/90 text-emerald-700 text-xs font-semibold">
                     {item.companyCode}
                   </Badge>
@@ -245,9 +340,15 @@ export default function NewsPage() {
                 {item.title}
               </h3>
               <p className="text-sm text-gray-500 line-clamp-2 mb-3">{item.preview}</p>
-              <div className="text-xs text-gray-400">
-                {formatShortDate(item.publishedAt)}
-              </div>
+              {item.isHidden ? (
+                <div className="text-xs text-amber-600 font-medium">
+                  Klik untuk membeli berita acak
+                </div>
+              ) : (
+                <div className="text-xs text-gray-400">
+                  {formatShortDate(item.publishedAt)}
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}

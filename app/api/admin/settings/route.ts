@@ -30,13 +30,15 @@ function toNumber(value: unknown): number {
 }
 
 async function loadSettings() {
-  const [sebSetting, ipSetting, startingSetting, dayControl, sebEnabled, ipEnabled] = await Promise.all([
+  const [sebSetting, ipSetting, startingSetting, dayControl, sebEnabled, ipEnabled, maxPaidNews, paidNewsPrice] = await Promise.all([
     prisma.setting.findUnique({ where: { key: 'seb_user_agent' } }),
     prisma.setting.findUnique({ where: { key: 'allowed_ips' } }),
     prisma.setting.findUnique({ where: { key: 'starting_balance' } }),
     prisma.dayControl.findUnique({ where: { id: 'day-control-singleton' } }),
     prisma.setting.findUnique({ where: { key: 'seb_enabled' } }),
     prisma.setting.findUnique({ where: { key: 'ip_restriction_enabled' } }),
+    prisma.setting.findUnique({ where: { key: 'max_paid_news_per_day' } }),
+    prisma.setting.findUnique({ where: { key: 'paid_news_price' } }),
   ])
 
   return {
@@ -46,6 +48,8 @@ async function loadSettings() {
     ipRestrictionEnabled: ipEnabled?.value === true || ipEnabled?.value === 'true',
     startingBalance: toNumber(startingSetting?.value ?? 10000000),
     totalDays: dayControl?.totalDays ?? 15,
+    maxPaidNewsPerDay: toNumber(maxPaidNews?.value ?? 5),
+    paidNewsPrice: toNumber(paidNewsPrice?.value ?? 500000),
   }
 }
 
@@ -56,6 +60,8 @@ const updateSchema = z.object({
   ipRestrictionEnabled: z.boolean().optional(),
   startingBalance: z.number().nonnegative().optional(),
   totalDays: z.number().int().positive().optional(),
+  maxPaidNewsPerDay: z.number().int().nonnegative().optional(),
+  paidNewsPrice: z.number().nonnegative().optional(),
 })
 
 export async function GET(request: NextRequest) {
@@ -164,6 +170,30 @@ export async function POST(request: NextRequest) {
             },
           })
         }
+      }
+
+      if (payload.maxPaidNewsPerDay !== undefined) {
+        await tx.setting.upsert({
+          where: { key: 'max_paid_news_per_day' },
+          update: { value: payload.maxPaidNewsPerDay },
+          create: {
+            key: 'max_paid_news_per_day',
+            value: payload.maxPaidNewsPerDay,
+            description: 'Maksimal berita berbayar yang bisa dibeli per hari per peserta',
+          },
+        })
+      }
+
+      if (payload.paidNewsPrice !== undefined) {
+        await tx.setting.upsert({
+          where: { key: 'paid_news_price' },
+          update: { value: payload.paidNewsPrice },
+          create: {
+            key: 'paid_news_price',
+            value: payload.paidNewsPrice,
+            description: 'Harga per berita berbayar',
+          },
+        })
       }
     })
 
