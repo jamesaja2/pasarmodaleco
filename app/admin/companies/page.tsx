@@ -22,7 +22,7 @@ type CompanyItem = {
   location: string
   description: string
   logoUrl: string | null
-  sellingPrice: number | null
+  sellingPrice: string | null
   sharesOutstanding: number | null
 }
 
@@ -80,7 +80,7 @@ export default function CompaniesPage() {
         location: String(item.location ?? ''),
         description: String(item.description ?? ''),
         logoUrl: item.logoUrl ?? null,
-        sellingPrice: item.sellingPrice != null ? Number(item.sellingPrice) : null,
+        sellingPrice: item.sellingPrice ?? null,
         sharesOutstanding: item.sharesOutstanding != null ? Number(item.sharesOutstanding) : null,
       }))
       setCompanies(normalized)

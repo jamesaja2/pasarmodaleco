@@ -64,6 +64,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         description: company.description,
         location: company.location,
         logoUrl: company.logoUrl,
+        sellingPrice: company.sellingPrice,
+        sharesOutstanding: company.sharesOutstanding ? Number(company.sharesOutstanding) : null,
       },
       currentDay,
       prices: prices.map((price) => ({

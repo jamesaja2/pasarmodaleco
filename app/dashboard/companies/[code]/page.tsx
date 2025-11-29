@@ -27,6 +27,8 @@ type CompanyDetail = {
   description: string | null
   location: string | null
   logoUrl: string | null
+  sellingPrice: string | null
+  sharesOutstanding: number | null
 }
 
 type PricePoint = {
@@ -181,11 +183,31 @@ export default function CompanyDetailPage() {
                 Hari berjalan: {data.currentDay}
               </Badge>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <h2 className="text-sm font-semibold text-gray-600">Deskripsi</h2>
-              <p className="text-sm text-gray-700 leading-relaxed">
-                {data.company.description ?? 'Belum ada deskripsi untuk perusahaan ini.'}
-              </p>
+            <CardContent className="space-y-4">
+              <div>
+                <h2 className="text-sm font-semibold text-gray-600">Deskripsi</h2>
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  {data.company.description ?? 'Belum ada deskripsi untuk perusahaan ini.'}
+                </p>
+              </div>
+
+              {data.company.sellingPrice && (
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-600">Nilai Jual</h2>
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    {data.company.sellingPrice}
+                  </p>
+                </div>
+              )}
+
+              {data.company.sharesOutstanding && (
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-600">Jumlah Saham Beredar</h2>
+                  <p className="text-sm text-gray-700">
+                    Rp {data.company.sharesOutstanding.toLocaleString('id-ID')}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
