@@ -5,7 +5,10 @@ import { existsSync } from 'fs'
 import path from 'path'
 import crypto from 'crypto'
 
-const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
+// Use /var/www/uploads in production (Linux), fallback to public/uploads in dev
+const UPLOAD_DIR = process.platform === 'win32' 
+  ? path.join(process.cwd(), 'public', 'uploads')
+  : '/var/www/uploads'
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ALLOWED_TYPES = [
   'image/jpeg',
