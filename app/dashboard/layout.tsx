@@ -112,7 +112,8 @@ export default function DashboardLayout({
 
   const handleLogout = async () => {
     await logout()
-    router.replace('/login/participant')
+    // Redirect to SEB quit link to close Safe Exam Browser
+    window.location.href = 'sebs://quit'
   }
 
   return (
