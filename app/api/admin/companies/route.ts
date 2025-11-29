@@ -11,7 +11,7 @@ const companySchema = z.object({
   description: z.string().optional(),
   location: z.string().optional(),
   logoUrl: z.string().url().optional().or(z.literal('')),
-  sellingPrice: z.number().positive().optional().nullable(),
+  sellingPrice: z.string().optional().nullable(),
   sharesOutstanding: z.number().int().positive().optional().nullable(),
 })
 
@@ -23,10 +23,9 @@ export async function GET(request: NextRequest) {
       orderBy: { stockCode: 'asc' },
     })
 
-    // Convert BigInt and Decimal to serializable types
+    // Convert BigInt to serializable type
     const serializedCompanies = companies.map((company) => ({
       ...company,
-      sellingPrice: company.sellingPrice ? Number(company.sellingPrice) : null,
       sharesOutstanding: company.sharesOutstanding ? Number(company.sharesOutstanding) : null,
     }))
 

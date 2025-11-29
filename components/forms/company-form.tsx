@@ -26,7 +26,7 @@ export type CompanyFormValues = {
   description: string
   logoUrl: string
   startingPrice: number | null
-  sellingPrice: number | null
+  sellingPrice: string
   sharesOutstanding: number | null
 }
 
@@ -39,7 +39,7 @@ interface CompanyFormProps {
     description: string
     logoUrl: string
     startingPrice: number | null
-    sellingPrice: number | null
+    sellingPrice: string | null
     sharesOutstanding: number | null
   }
   onSubmit: (data: CompanyFormValues) => void
@@ -71,10 +71,7 @@ export function CompanyForm({ initialData, onSubmit, onCancel, isLoading }: Comp
       initialData?.startingPrice != null && Number.isFinite(initialData.startingPrice)
         ? String(initialData.startingPrice)
         : INITIAL_STATE.startingPrice,
-    sellingPrice:
-      initialData?.sellingPrice != null && Number.isFinite(initialData.sellingPrice)
-        ? String(initialData.sellingPrice)
-        : INITIAL_STATE.sellingPrice,
+    sellingPrice: initialData?.sellingPrice ?? INITIAL_STATE.sellingPrice,
     sharesOutstanding:
       initialData?.sharesOutstanding != null && Number.isFinite(initialData.sharesOutstanding)
         ? String(initialData.sharesOutstanding)
@@ -106,12 +103,6 @@ export function CompanyForm({ initialData, onSubmit, onCancel, isLoading }: Comp
         newErrors.startingPrice = 'Harga awal harus lebih dari 0'
       }
     }
-    if (formData.sellingPrice) {
-      const priceValue = Number(formData.sellingPrice)
-      if (!Number.isFinite(priceValue) || priceValue <= 0) {
-        newErrors.sellingPrice = 'Nilai jual harus lebih dari 0'
-      }
-    }
     if (formData.sharesOutstanding) {
       const sharesValue = Number(formData.sharesOutstanding)
       if (!Number.isFinite(sharesValue) || sharesValue <= 0 || !Number.isInteger(sharesValue)) {
@@ -135,7 +126,7 @@ export function CompanyForm({ initialData, onSubmit, onCancel, isLoading }: Comp
       description: formData.description.trim(),
       logoUrl: formData.logoUrl.trim(),
       startingPrice: formData.startingPrice ? Number(formData.startingPrice) : null,
-      sellingPrice: formData.sellingPrice ? Number(formData.sellingPrice) : null,
+      sellingPrice: formData.sellingPrice.trim() || null,
       sharesOutstanding: formData.sharesOutstanding ? Number(formData.sharesOutstanding) : null,
     }
 
@@ -183,19 +174,16 @@ export function CompanyForm({ initialData, onSubmit, onCancel, isLoading }: Comp
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Nilai Jual (Rp)</label>
+              <label className="block text-sm font-medium mb-1">Nilai Jual</label>
               <Input
-                type="number"
+                type="text"
                 value={formData.sellingPrice}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, sellingPrice: e.target.value }))
                 }
-                placeholder="10000"
-                className={errors.sellingPrice ? 'border-red-500' : ''}
-                min="0"
+                placeholder="Contoh: Rp 5.000.000.000 atau 5 Miliar"
               />
-              {errors.sellingPrice && <p className="text-xs text-red-600 mt-1">{errors.sellingPrice}</p>}
-              <p className="text-xs text-gray-500 mt-1">Harga jual untuk valuasi perusahaan</p>
+              <p className="text-xs text-gray-500 mt-1">Nilai jual perusahaan (teks bebas untuk profil)</p>
             </div>
 
             <div>

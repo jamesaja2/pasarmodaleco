@@ -10,7 +10,7 @@ const updateSchema = z.object({
   description: z.string().optional(),
   location: z.string().optional(),
   logoUrl: z.string().url().optional().or(z.literal('')),
-  sellingPrice: z.number().positive().optional().nullable(),
+  sellingPrice: z.string().optional().nullable(),
   sharesOutstanding: z.number().int().positive().optional().nullable(),
 })
 

@@ -72,7 +72,7 @@ model Company {
   description       String?
   location          String?
   logoUrl           String?
-  sellingPrice      Decimal?      @db.Decimal(20, 2)  // Nilai Jual
+  sellingPrice      String?       // Nilai Jual (teks)
   sharesOutstanding BigInt?       // Jumlah saham beredar
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
