@@ -15,27 +15,37 @@ export async function POST(request: NextRequest) {
     
     const lines = data.split('\n').filter(line => line.trim())
     
-    if (lines.length < 2) {
-      return NextResponse.json({ error: 'Data must have header and at least one data row' }, { status: 400 })
+    if (lines.length < 1) {
+      return NextResponse.json({ error: 'No data rows found' }, { status: 400 })
     }
     
-    // Detect delimiter (tab for paste from Excel, comma for CSV)
-    const delimiter = mode === 'paste' || lines[0].includes('\t') ? '\t' : ','
-    
-    // Parse header
-    const header = lines[0].split(delimiter).map(h => h.trim().toLowerCase().replace(/['"]/g, ''))
-    const requiredFields = ['companycode', 'daynumber', 'price']
-    
-    // Also accept stockcode as alias
-    const hasCompanyCode = header.includes('companycode') || header.includes('stockcode')
-    if (!hasCompanyCode) {
-      return NextResponse.json({ error: 'Missing required column: companyCode or stockCode' }, { status: 400 })
+    // Detect delimiter (tab, space, or comma)
+    const firstLine = lines[0]
+    let delimiter = ','
+    if (firstLine.includes('\t')) {
+      delimiter = '\t'
+    } else if (!firstLine.includes(',') && firstLine.includes(' ')) {
+      delimiter = ' '
     }
-    if (!header.includes('daynumber')) {
-      return NextResponse.json({ error: 'Missing required column: dayNumber' }, { status: 400 })
-    }
-    if (!header.includes('price')) {
-      return NextResponse.json({ error: 'Missing required column: price' }, { status: 400 })
+    
+    // Check if first line is header or data
+    const firstLineParts = firstLine.split(delimiter === ' ' ? /\s+/ : delimiter).map(p => p.trim().toLowerCase().replace(/['"]/g, ''))
+    const hasHeader = firstLineParts.includes('companycode') || firstLineParts.includes('stockcode') || 
+                      firstLineParts.includes('daynumber') || firstLineParts.includes('price')
+    
+    let header: string[]
+    let startIndex: number
+    
+    if (hasHeader) {
+      header = firstLineParts
+      startIndex = 1
+      if (lines.length < 2) {
+        return NextResponse.json({ error: 'Data must have at least one data row after header' }, { status: 400 })
+      }
+    } else {
+      // No header - assume format: companyCode, dayNumber, price, isActive (optional)
+      header = ['companycode', 'daynumber', 'price', 'isactive']
+      startIndex = 0
     }
     
     // Get company mapping (stockCode -> id)
@@ -48,16 +58,18 @@ export async function POST(request: NextRequest) {
     const pricesToUpsert: { companyId: string; dayNumber: number; price: number; isActive: boolean }[] = []
     
     // Parse data rows
-    for (let i = 1; i < lines.length; i++) {
+    for (let i = startIndex; i < lines.length; i++) {
       const line = lines[i].trim()
       if (!line) continue
       
-      const values = delimiter === '\t' 
-        ? line.split('\t').map(v => v.trim().replace(/['"]/g, ''))
-        : parseCSVLine(line)
+      const values = delimiter === ' ' 
+        ? line.split(/\s+/).map(v => v.trim().replace(/['"]/g, ''))
+        : delimiter === '\t' 
+          ? line.split('\t').map(v => v.trim().replace(/['"]/g, ''))
+          : parseCSVLine(line)
       
-      if (values.length < header.length) {
-        errors.push(`Row ${i + 1}: Column count mismatch`)
+      if (values.length < 3) {
+        errors.push(`Row ${i + 1}: Need at least 3 columns (companyCode, dayNumber, price)`)
         continue
       }
       
