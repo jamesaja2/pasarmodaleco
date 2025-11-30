@@ -99,7 +99,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       // Delete portfolio holdings
       await tx.portfolioHolding.deleteMany({ where: { userId: id } })
       // Delete news purchases
-      await tx.newsPurchase.deleteMany({ where: { userId: id } })
+      await tx.userNewsPurchase.deleteMany({ where: { userId: id } })
       // Delete participant credential
       await tx.participantCredential.deleteMany({ where: { userId: id } })
       // Finally delete the user
