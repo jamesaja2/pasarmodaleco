@@ -92,7 +92,19 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
       return NextResponse.json({ error: 'Participant not found' }, { status: 404 })
     }
 
-    await prisma.user.delete({ where: { id } })
+    // Delete all related data in a transaction
+    await prisma.$transaction(async (tx) => {
+      // Delete transactions
+      await tx.transaction.deleteMany({ where: { userId: id } })
+      // Delete portfolio holdings
+      await tx.portfolioHolding.deleteMany({ where: { userId: id } })
+      // Delete news purchases
+      await tx.newsPurchase.deleteMany({ where: { userId: id } })
+      // Delete credential
+      await tx.credential.deleteMany({ where: { userId: id } })
+      // Finally delete the user
+      await tx.user.delete({ where: { id } })
+    })
 
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
