@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { Plus, Edit2, Trash2, Loader2, RefreshCcw } from 'lucide-react'
+import { Plus, Edit2, Trash2, Loader2, RefreshCcw, Upload, Download } from 'lucide-react'
 import { NewsForm, NewsFormValues } from '@/components/forms/news-form'
 import { apiClient, ApiError } from '@/lib/api-client'
 import { useToast } from '@/hooks/use-toast'
@@ -47,6 +47,7 @@ export default function NewsManagementPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedNews, setSelectedNews] = useState<NewsListItem | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [importing, setImporting] = useState(false)
 
   const fetchNews = useCallback(async () => {
     setLoading(true)
@@ -174,17 +175,99 @@ export default function NewsManagementPage() {
     return newsItems.filter((item) => item.title.toLowerCase().includes(query))
   }, [newsItems, searchTerm])
 
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setImporting(true)
+    setError(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/admin/news/import', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Gagal import berita')
+      }
+
+      toast({
+        title: 'Import berhasil',
+        description: `${result.imported} berita berhasil diimport.${result.errors?.length ? ` ${result.errors.length} error.` : ''}`,
+      })
+
+      if (result.errors?.length) {
+        console.warn('Import errors:', result.errors)
+      }
+
+      await fetchNews()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Gagal import berita'
+      setError(message)
+      toast({ title: 'Gagal import', description: message, variant: 'destructive' })
+    } finally {
+      setImporting(false)
+      // Reset input
+      event.target.value = ''
+    }
+  }
+
+  const downloadTemplate = () => {
+    const csvContent = `title,content,dayNumber,isPaid,price,companyCode
+"Judul Berita Contoh","Isi konten berita yang panjang bisa menggunakan tanda kutip",1,false,,ABCD
+"Berita Berbayar","Konten berita berbayar",2,true,5000,EFGH
+"Berita Umum","Berita tanpa perusahaan terkait",1,false,,`
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = 'template_import_berita.csv'
+    link.click()
+    URL.revokeObjectURL(link.href)
+  }
+
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-bold">Manajemen Berita</h1>
           <p className="text-gray-600">Kelola berita dan konten untuk peserta</p>
         </div>
-        <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={openCreateDialog}>
-          <Plus className="w-4 h-4 mr-2" />
-          Buat Berita
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={downloadTemplate}>
+            <Download className="w-4 h-4 mr-2" />
+            Template CSV
+          </Button>
+          <label>
+            <Button variant="outline" disabled={importing} asChild>
+              <span>
+                {importing ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4 mr-2" />
+                )}
+                Import CSV
+              </span>
+            </Button>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleImport}
+              className="hidden"
+              disabled={importing}
+            />
+          </label>
+          <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={openCreateDialog}>
+            <Plus className="w-4 h-4 mr-2" />
+            Buat Berita
+          </Button>
+        </div>
       </div>
 
       <Card>
