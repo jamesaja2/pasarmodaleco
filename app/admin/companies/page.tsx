@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Edit2, Trash2, Loader2, RefreshCcw, BarChart2, FileText, Save } from 'lucide-react'
+import { Plus, Edit2, Trash2, Loader2, RefreshCcw, BarChart2, FileText, Save, Upload, Download, ClipboardPaste } from 'lucide-react'
 import { CompanyForm, CompanyFormValues } from '@/components/forms/company-form'
 import { apiClient, ApiError } from '@/lib/api-client'
 import { useToast } from '@/hooks/use-toast'
@@ -66,6 +66,9 @@ export default function CompaniesPage() {
   const [reportError, setReportError] = useState<string | null>(null)
   const [priceSubmitting, setPriceSubmitting] = useState(false)
   const [reportSubmitting, setReportSubmitting] = useState(false)
+  const [priceImportDialogOpen, setPriceImportDialogOpen] = useState(false)
+  const [priceImportData, setPriceImportData] = useState('')
+  const [priceImporting, setPriceImporting] = useState(false)
 
   const fetchCompanies = useCallback(async () => {
     setLoading(true)
@@ -354,17 +357,81 @@ export default function CompaniesPage() {
     )
   }, [companies, searchTerm])
 
+  const handlePriceImport = async () => {
+    if (!priceImportData.trim()) {
+      toast({ title: 'Data kosong', description: 'Paste data dari Excel atau isi dengan format CSV', variant: 'destructive' })
+      return
+    }
+
+    setPriceImporting(true)
+    try {
+      const response = await fetch('/api/admin/prices/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: priceImportData, mode: 'paste' }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Gagal import harga')
+      }
+
+      toast({
+        title: 'Import berhasil',
+        description: `${result.imported} baru, ${result.updated} diperbarui.${result.errors?.length ? ` ${result.errors.length} error.` : ''}`,
+      })
+
+      if (result.errors?.length) {
+        console.warn('Import errors:', result.errors)
+      }
+
+      setPriceImportDialogOpen(false)
+      setPriceImportData('')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Gagal import harga'
+      toast({ title: 'Gagal import', description: message, variant: 'destructive' })
+    } finally {
+      setPriceImporting(false)
+    }
+  }
+
+  const downloadPriceTemplate = () => {
+    const csvContent = `companyCode,dayNumber,price,isActive
+ABCD,0,5000,true
+ABCD,1,5100,true
+EFGH,0,10000,true
+EFGH,1,10500,true`
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = 'template_import_harga.csv'
+    link.click()
+    URL.revokeObjectURL(link.href)
+  }
+
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-bold">Manajemen Perusahaan</h1>
           <p className="text-gray-600">Kelola data perusahaan dan harga saham</p>
         </div>
-        <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={openCreateDialog}>
-          <Plus className="w-4 h-4 mr-2" />
-          Tambah Perusahaan
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={downloadPriceTemplate}>
+            <Download className="w-4 h-4 mr-2" />
+            Template Harga
+          </Button>
+          <Button variant="outline" onClick={() => setPriceImportDialogOpen(true)}>
+            <ClipboardPaste className="w-4 h-4 mr-2" />
+            Import Harga
+          </Button>
+          <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={openCreateDialog}>
+            <Plus className="w-4 h-4 mr-2" />
+            Tambah Perusahaan
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -689,6 +756,68 @@ export default function CompaniesPage() {
                   </table>
                 </div>
               )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Price Import Dialog */}
+      <Dialog open={priceImportDialogOpen} onOpenChange={setPriceImportDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-xl font-bold">Import Harga Saham</h2>
+              <p className="text-sm text-gray-600">
+                Copy dari Excel dan paste langsung, atau upload file CSV
+              </p>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+              <p className="font-medium text-blue-800 mb-1">Format kolom:</p>
+              <code className="text-xs text-blue-700">companyCode | dayNumber | price | isActive (opsional)</code>
+              <p className="text-xs text-blue-600 mt-1">
+                Contoh: ABCD &nbsp; 0 &nbsp; 5000 &nbsp; true
+              </p>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium">Data (paste dari Excel atau CSV)</Label>
+              <Textarea
+                value={priceImportData}
+                onChange={(e) => setPriceImportData(e.target.value)}
+                placeholder={`companyCode\tdayNumber\tprice\tisActive
+ABCD\t0\t5000\ttrue
+ABCD\t1\t5100\ttrue
+EFGH\t0\t10000\ttrue`}
+                className="mt-1 font-mono text-sm h-48"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Baris pertama harus header. Paste langsung dari Excel sudah otomatis tab-separated.
+              </p>
+            </div>
+
+            <div className="flex justify-between items-center pt-2">
+              <Button variant="outline" onClick={downloadPriceTemplate} size="sm">
+                <Download className="w-4 h-4 mr-2" />
+                Download Template CSV
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setPriceImportDialogOpen(false)}>
+                  Batal
+                </Button>
+                <Button 
+                  onClick={handlePriceImport} 
+                  disabled={priceImporting || !priceImportData.trim()}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {priceImporting ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4 mr-2" />
+                  )}
+                  Import
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>

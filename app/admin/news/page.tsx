@@ -5,10 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { Plus, Edit2, Trash2, Loader2, RefreshCcw, Upload, Download } from 'lucide-react'
+import { Plus, Edit2, Trash2, Loader2, RefreshCcw, Upload, Download, ClipboardPaste } from 'lucide-react'
 import { NewsForm, NewsFormValues } from '@/components/forms/news-form'
 import { apiClient, ApiError } from '@/lib/api-client'
 import { useToast } from '@/hooks/use-toast'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 
 type NewsListItem = {
   id: string
@@ -48,6 +50,8 @@ export default function NewsManagementPage() {
   const [selectedNews, setSelectedNews] = useState<NewsListItem | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [importData, setImportData] = useState('')
 
   const fetchNews = useCallback(async () => {
     setLoading(true)
@@ -232,6 +236,49 @@ export default function NewsManagementPage() {
     URL.revokeObjectURL(link.href)
   }
 
+  const handlePasteImport = async () => {
+    if (!importData.trim()) {
+      toast({ title: 'Data kosong', description: 'Paste data dari Excel atau isi dengan format CSV', variant: 'destructive' })
+      return
+    }
+
+    setImporting(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/admin/news/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: importData, mode: 'paste' }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Gagal import berita')
+      }
+
+      toast({
+        title: 'Import berhasil',
+        description: `${result.imported} berita berhasil diimport.${result.errors?.length ? ` ${result.errors.length} error.` : ''}`,
+      })
+
+      if (result.errors?.length) {
+        console.warn('Import errors:', result.errors)
+      }
+
+      setImportDialogOpen(false)
+      setImportData('')
+      await fetchNews()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Gagal import berita'
+      setError(message)
+      toast({ title: 'Gagal import', description: message, variant: 'destructive' })
+    } finally {
+      setImporting(false)
+    }
+  }
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -243,6 +290,10 @@ export default function NewsManagementPage() {
           <Button variant="outline" onClick={downloadTemplate}>
             <Download className="w-4 h-4 mr-2" />
             Template CSV
+          </Button>
+          <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+            <ClipboardPaste className="w-4 h-4 mr-2" />
+            Paste Import
           </Button>
           <label>
             <Button variant="outline" disabled={importing} asChild>
@@ -387,6 +438,67 @@ export default function NewsManagementPage() {
             onCancel={closeDialog}
             isLoading={formLoading}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Paste Import Dialog */}
+      <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-xl font-bold">Import Berita</h2>
+              <p className="text-sm text-gray-600">
+                Copy dari Excel dan paste langsung, atau ketik dalam format CSV
+              </p>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+              <p className="font-medium text-blue-800 mb-1">Format kolom:</p>
+              <code className="text-xs text-blue-700">title | content | dayNumber | isPaid | price | companyCode</code>
+              <p className="text-xs text-blue-600 mt-1">
+                Contoh: Judul Berita &nbsp; Isi konten... &nbsp; 1 &nbsp; false &nbsp; &nbsp; ABCD
+              </p>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium">Data (paste dari Excel)</Label>
+              <Textarea
+                value={importData}
+                onChange={(e) => setImportData(e.target.value)}
+                placeholder={`title\tcontent\tdayNumber\tisPaid\tprice\tcompanyCode
+Berita Hari Ini\tIsi berita lengkap di sini\t1\tfalse\t\tABCD
+Berita Berbayar\tKonten premium\t2\ttrue\t5000\tEFGH`}
+                className="mt-1 font-mono text-sm h-48"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Baris pertama harus header. Paste langsung dari Excel sudah otomatis tab-separated.
+              </p>
+            </div>
+
+            <div className="flex justify-between items-center pt-2">
+              <Button variant="outline" onClick={downloadTemplate} size="sm">
+                <Download className="w-4 h-4 mr-2" />
+                Download Template CSV
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
+                  Batal
+                </Button>
+                <Button 
+                  onClick={handlePasteImport} 
+                  disabled={importing || !importData.trim()}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {importing ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4 mr-2" />
+                  )}
+                  Import
+                </Button>
+              </div>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

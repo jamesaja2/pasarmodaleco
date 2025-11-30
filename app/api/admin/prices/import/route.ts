@@ -6,33 +6,14 @@ export async function POST(request: NextRequest) {
   try {
     await requireAdmin(request)
     
-    let text: string
-    let mode: string = 'csv'
+    const body = await request.json()
+    const { data, mode } = body // mode: 'csv' or 'paste'
     
-    const contentType = request.headers.get('content-type') || ''
-    
-    if (contentType.includes('application/json')) {
-      // Paste mode - JSON body with data string
-      const body = await request.json()
-      text = body.data || ''
-      mode = body.mode || 'paste'
-    } else {
-      // File upload mode
-      const formData = await request.formData()
-      const file = formData.get('file') as File | null
-      
-      if (!file) {
-        return NextResponse.json({ error: 'No file provided' }, { status: 400 })
-      }
-      
-      text = await file.text()
-    }
-    
-    if (!text.trim()) {
+    if (!data || typeof data !== 'string') {
       return NextResponse.json({ error: 'No data provided' }, { status: 400 })
     }
     
-    const lines = text.split('\n').filter(line => line.trim())
+    const lines = data.split('\n').filter(line => line.trim())
     
     if (lines.length < 2) {
       return NextResponse.json({ error: 'Data must have header and at least one data row' }, { status: 400 })
@@ -43,12 +24,18 @@ export async function POST(request: NextRequest) {
     
     // Parse header
     const header = lines[0].split(delimiter).map(h => h.trim().toLowerCase().replace(/['"]/g, ''))
-    const requiredFields = ['title', 'content', 'daynumber']
+    const requiredFields = ['companycode', 'daynumber', 'price']
     
-    for (const field of requiredFields) {
-      if (!header.includes(field)) {
-        return NextResponse.json({ error: `Missing required column: ${field}` }, { status: 400 })
-      }
+    // Also accept stockcode as alias
+    const hasCompanyCode = header.includes('companycode') || header.includes('stockcode')
+    if (!hasCompanyCode) {
+      return NextResponse.json({ error: 'Missing required column: companyCode or stockCode' }, { status: 400 })
+    }
+    if (!header.includes('daynumber')) {
+      return NextResponse.json({ error: 'Missing required column: dayNumber' }, { status: 400 })
+    }
+    if (!header.includes('price')) {
+      return NextResponse.json({ error: 'Missing required column: price' }, { status: 400 })
     }
     
     // Get company mapping (stockCode -> id)
@@ -58,20 +45,19 @@ export async function POST(request: NextRequest) {
     const companyMap = new Map(companies.map(c => [c.stockCode.toUpperCase(), c.id]))
     
     const errors: string[] = []
-    const newsToCreate: any[] = []
+    const pricesToUpsert: { companyId: string; dayNumber: number; price: number; isActive: boolean }[] = []
     
     // Parse data rows
     for (let i = 1; i < lines.length; i++) {
       const line = lines[i].trim()
       if (!line) continue
       
-      // Handle based on delimiter
       const values = delimiter === '\t' 
         ? line.split('\t').map(v => v.trim().replace(/['"]/g, ''))
         : parseCSVLine(line)
       
-      if (values.length !== header.length) {
-        errors.push(`Row ${i + 1}: Column count mismatch (expected ${header.length}, got ${values.length})`)
+      if (values.length < header.length) {
+        errors.push(`Row ${i + 1}: Column count mismatch`)
         continue
       }
       
@@ -80,62 +66,79 @@ export async function POST(request: NextRequest) {
         row[h] = values[idx]?.trim() ?? ''
       })
       
-      // Validate required fields
-      if (!row.title) {
-        errors.push(`Row ${i + 1}: Missing title`)
+      // Get company code
+      const companyCode = (row.companycode || row.stockcode || '').toUpperCase()
+      if (!companyCode) {
+        errors.push(`Row ${i + 1}: Missing company code`)
         continue
       }
-      if (!row.content) {
-        errors.push(`Row ${i + 1}: Missing content`)
+      
+      const companyId = companyMap.get(companyCode)
+      if (!companyId) {
+        errors.push(`Row ${i + 1}: Company not found: ${companyCode}`)
         continue
       }
       
       const dayNumber = parseInt(row.daynumber, 10)
       if (isNaN(dayNumber) || dayNumber < 0) {
-        errors.push(`Row ${i + 1}: Invalid dayNumber "${row.daynumber}"`)
+        errors.push(`Row ${i + 1}: Invalid dayNumber: ${row.daynumber}`)
         continue
       }
       
-      // Parse optional fields
-      const isPaid = row.ispaid?.toLowerCase() === 'true' || row.ispaid === '1'
-      const price = row.price ? parseFloat(row.price) : null
-      
-      // Map company by stockCode
-      let companyId: string | null = null
-      if (row.companycode || row.stockcode) {
-        const code = (row.companycode || row.stockcode).toUpperCase()
-        companyId = companyMap.get(code) ?? null
-        if (!companyId && code) {
-          errors.push(`Row ${i + 1}: Company not found with code "${code}"`)
-        }
+      const price = parseFloat(row.price.replace(/[,]/g, ''))
+      if (isNaN(price) || price < 0) {
+        errors.push(`Row ${i + 1}: Invalid price: ${row.price}`)
+        continue
       }
       
-      newsToCreate.push({
-        title: row.title,
-        content: row.content,
-        dayNumber,
-        isPaid,
-        price: isPaid && price ? price : null,
+      const isActive = row.isactive?.toLowerCase() === 'true' || row.isactive === '1' || row.isactive === undefined
+      
+      pricesToUpsert.push({
         companyId,
-        publishedAt: new Date(),
+        dayNumber,
+        price,
+        isActive: isActive !== false,
       })
     }
     
-    if (newsToCreate.length === 0) {
+    if (pricesToUpsert.length === 0) {
       return NextResponse.json({ 
         error: 'No valid rows to import', 
         details: errors 
       }, { status: 400 })
     }
     
-    // Create all news entries
-    const result = await prisma.news.createMany({
-      data: newsToCreate,
-    })
+    // Upsert prices (update if exists, create if not)
+    let imported = 0
+    let updated = 0
+    
+    for (const priceData of pricesToUpsert) {
+      const existing = await prisma.stockPrice.findFirst({
+        where: {
+          companyId: priceData.companyId,
+          dayNumber: priceData.dayNumber,
+        }
+      })
+      
+      if (existing) {
+        await prisma.stockPrice.update({
+          where: { id: existing.id },
+          data: { price: priceData.price, isActive: priceData.isActive }
+        })
+        updated++
+      } else {
+        await prisma.stockPrice.create({
+          data: priceData
+        })
+        imported++
+      }
+    }
     
     return NextResponse.json({ 
       success: true, 
-      imported: result.count,
+      imported,
+      updated,
+      total: imported + updated,
       errors: errors.length > 0 ? errors : undefined
     })
   } catch (error: unknown) {
@@ -145,8 +148,8 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error && error.message === 'FORBIDDEN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
-    console.error('Failed to import news', error)
-    return NextResponse.json({ error: 'Failed to import news' }, { status: 500 })
+    console.error('Failed to import prices', error)
+    return NextResponse.json({ error: 'Failed to import prices' }, { status: 500 })
   }
 }
 
@@ -161,11 +164,9 @@ function parseCSVLine(line: string): string[] {
     
     if (char === '"') {
       if (inQuotes && line[i + 1] === '"') {
-        // Escaped quote
         current += '"'
         i++
       } else {
-        // Toggle quote mode
         inQuotes = !inQuotes
       }
     } else if (char === ',' && !inQuotes) {
