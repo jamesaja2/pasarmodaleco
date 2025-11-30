@@ -83,14 +83,17 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         updatedAt: report.updatedAt,
       })),
       news: news.map((item) => {
+        // Type assertion for conditional include
+        const purchases = 'purchases' in item ? (item as any).purchases : undefined
         const hasAccess =
           !item.isPaid ||
           user.role === 'ADMIN' ||
-          (Array.isArray(item.purchases) && item.purchases.length > 0)
+          (Array.isArray(purchases) && purchases.length > 0)
 
         return {
           id: item.id,
-          title: item.title,
+          // Hide title for paid news that user hasn't purchased (except admin)
+          title: hasAccess ? item.title : 'Berita Berbayar',
           content: hasAccess ? item.content : null,
           dayNumber: item.dayNumber,
           isPaid: item.isPaid,

@@ -9,6 +9,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Lock, DollarSign, CheckCircle, RefreshCcw, Newspaper, Calendar, Building2, X, Shuffle } from 'lucide-react'
@@ -75,6 +77,7 @@ export default function NewsPage() {
   const [contentLoading, setContentLoading] = useState(false)
   const [paidNewsStatus, setPaidNewsStatus] = useState<PaidNewsStatus | null>(null)
   const [randomPurchaseLoading, setRandomPurchaseLoading] = useState(false)
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
 
   const fetchPaidNewsStatus = useCallback(async () => {
     try {
@@ -117,9 +120,16 @@ export default function NewsPage() {
     fetchPaidNewsStatus().catch(() => null)
   }, [fetchNews, fetchPaidNewsStatus, filter])
 
-  // Handle random paid news purchase
+  // Open confirmation dialog for random purchase
+  const handleRequestRandomPurchase = useCallback(() => {
+    if (!user || user.role !== 'PARTICIPANT') return
+    setConfirmDialogOpen(true)
+  }, [user])
+
+  // Handle random paid news purchase (after confirmation)
   const handleRandomPurchase = useCallback(async () => {
     if (!user || user.role !== 'PARTICIPANT') return
+    setConfirmDialogOpen(false)
     setRandomPurchaseLoading(true)
     setError(null)
     try {
@@ -265,7 +275,7 @@ export default function NewsPage() {
               </div>
               <Button
                 className="bg-amber-600 hover:bg-amber-700 text-white"
-                onClick={handleRandomPurchase}
+                onClick={handleRequestRandomPurchase}
                 disabled={randomPurchaseLoading}
               >
                 <Shuffle className="w-4 h-4 mr-2" />
@@ -294,7 +304,7 @@ export default function NewsPage() {
           <Card
             key={item.id}
             className={`hover:shadow-lg transition-all cursor-pointer group overflow-hidden ${item.isHidden ? 'opacity-75' : ''}`}
-            onClick={() => item.isHidden ? handleRandomPurchase() : handleOpenNews(item)}
+            onClick={() => item.isHidden ? handleRequestRandomPurchase() : handleOpenNews(item)}
           >
             {/* News Card Header with gradient */}
             <div className={`h-24 relative ${item.isHidden ? 'bg-gradient-to-br from-amber-500 to-orange-600' : 'bg-gradient-to-br from-emerald-500 to-teal-600'}`}>
@@ -463,6 +473,60 @@ export default function NewsPage() {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmation Dialog for Random Purchase */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center">
+              <Shuffle className="w-7 h-7 text-amber-600" />
+            </div>
+            <DialogTitle className="text-center text-xl">
+              Beli Berita Acak?
+            </DialogTitle>
+            <DialogDescription className="text-center pt-2">
+              Anda akan membeli berita acak dengan harga{' '}
+              <span className="font-bold text-amber-600">
+                Rp {(paidNewsStatus?.paidNewsPrice ?? 0).toLocaleString('id-ID')}
+              </span>
+              . Saldo Anda akan dipotong secara otomatis.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-gray-50 rounded-lg p-4 my-4">
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-gray-600">Saldo saat ini</span>
+              <span className="font-semibold">Rp {(Number(user?.currentBalance) || 0).toLocaleString('id-ID')}</span>
+            </div>
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-gray-600">Harga berita</span>
+              <span className="font-semibold text-amber-600">- Rp {(paidNewsStatus?.paidNewsPrice ?? 0).toLocaleString('id-ID')}</span>
+            </div>
+            <div className="border-t pt-2 flex justify-between text-sm">
+              <span className="text-gray-600">Saldo setelah beli</span>
+              <span className="font-semibold text-emerald-600">
+                Rp {((Number(user?.currentBalance) || 0) - (paidNewsStatus?.paidNewsPrice ?? 0)).toLocaleString('id-ID')}
+              </span>
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmDialogOpen(false)}
+              className="flex-1 sm:flex-initial"
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleRandomPurchase}
+              disabled={randomPurchaseLoading}
+              className="flex-1 sm:flex-initial bg-amber-600 hover:bg-amber-700"
+            >
+              <DollarSign className="w-4 h-4 mr-2" />
+              {randomPurchaseLoading ? 'Memproses...' : 'Ya, Beli Sekarang'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

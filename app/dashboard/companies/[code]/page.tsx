@@ -285,7 +285,9 @@ export default function CompanyDetailPage() {
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="space-y-1">
                         <p className="text-sm font-semibold text-gray-800">Hari {item.dayNumber}</p>
-                        <h3 className="text-base font-semibold text-gray-900">{item.title}</h3>
+                        <h3 className="text-base font-semibold text-gray-900">
+                          {item.canRead ? item.title : 'Berita Berbayar'}
+                        </h3>
                         <p className="text-xs text-gray-500">Terbit: {new Date(item.publishedAt).toLocaleString('id-ID')}</p>
                       </div>
                       <Badge variant={item.isPaid ? 'default' : 'outline'}>
