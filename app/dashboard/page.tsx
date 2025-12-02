@@ -45,7 +45,18 @@ type BrokerOption = {
   description: string
 }
 
-const CHART_COLORS = ['#10B981', '#059669', '#34D399', '#22C55E', '#047857', '#A7F3D0']
+const CHART_COLORS = [
+  '#EF4444', // Merah
+  '#3B82F6', // Biru
+  '#F59E0B', // Kuning/Orange
+  '#10B981', // Hijau
+  '#8B5CF6', // Ungu
+  '#EC4899', // Pink
+  '#06B6D4', // Cyan
+  '#F97316', // Orange
+  '#84CC16', // Lime
+  '#6366F1', // Indigo
+]
 
 function toNumber(value: unknown): number {
   if (typeof value === 'number') return value
