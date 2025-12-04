@@ -254,38 +254,6 @@ export default function NewsPage() {
         </Card>
       )}
 
-      {/* Paid News Purchase Card */}
-      {paidNewsStatus && paidNewsStatus.remainingPurchases > 0 && paidNewsStatus.availableNews > 0 && (
-        <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50">
-          <CardContent className="py-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
-                  <Shuffle className="w-6 h-6 text-amber-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-amber-900">Berita Berbayar</h3>
-                  <p className="text-sm text-amber-700">
-                    Sisa pembelian hari ini: <span className="font-bold">{paidNewsStatus.remainingPurchases}</span> dari {paidNewsStatus.maxPaidNewsPerDay}
-                  </p>
-                  <p className="text-xs text-amber-600">
-                    Tersedia {paidNewsStatus.availableNews} berita • Harga: Rp {paidNewsStatus.paidNewsPrice.toLocaleString('id-ID')}
-                  </p>
-                </div>
-              </div>
-              <Button
-                className="bg-amber-600 hover:bg-amber-700 text-white"
-                onClick={handleRequestRandomPurchase}
-                disabled={randomPurchaseLoading}
-              >
-                <Shuffle className="w-4 h-4 mr-2" />
-                {randomPurchaseLoading ? 'Membeli...' : 'Beli Berita Acak'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* News Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading && !filteredNews.length && (

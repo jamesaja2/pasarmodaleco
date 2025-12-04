@@ -89,8 +89,19 @@ export async function GET(request: NextRequest) {
       return item.dayNumber === currentDay
     })
 
+    // Sort: paid news first, then by publishedAt
+    const sortedNews = filteredNews.sort((a, b) => {
+      // Paid news comes first
+      if (a.isPaid && !b.isPaid) return -1
+      if (!a.isPaid && b.isPaid) return 1
+      // Then sort by publishedAt
+      const dateA = new Date(a.publishedAt).getTime()
+      const dateB = new Date(b.publishedAt).getTime()
+      return sort === 'latest' ? dateB - dateA : dateA - dateB
+    })
+
     const payload = {
-      news: filteredNews.map((item) => {
+      news: sortedNews.map((item) => {
         const isPurchased = user.role === 'ADMIN' ? true : Array.isArray(item.purchases) ? item.purchases.length > 0 : false
         
         // For paid news that hasn't been purchased by participant, hide the title and content
