@@ -204,7 +204,7 @@ export default function CompanyDetailPage() {
                 <div>
                   <h2 className="text-sm font-semibold text-gray-600">Jumlah Saham Beredar</h2>
                   <p className="text-sm text-gray-700">
-                    Rp {data.company.sharesOutstanding.toLocaleString('id-ID')}
+                    {data.company.sharesOutstanding.toLocaleString('id-ID')} lembar
                   </p>
                 </div>
               )}

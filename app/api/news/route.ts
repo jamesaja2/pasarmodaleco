@@ -73,8 +73,24 @@ export async function GET(request: NextRequest) {
       },
     })
 
+    // Filter and map news
+    const filteredNews = newsList.filter((item) => {
+      // Admin sees everything
+      if (user.role === 'ADMIN') return true
+      
+      // Free news always visible
+      if (!item.isPaid) return true
+      
+      // Purchased paid news always visible (even from previous days)
+      const isPurchased = Array.isArray(item.purchases) && item.purchases.length > 0
+      if (isPurchased) return true
+      
+      // Unpurchased paid news only visible for current day
+      return item.dayNumber === currentDay
+    })
+
     const payload = {
-      news: newsList.map((item) => {
+      news: filteredNews.map((item) => {
         const isPurchased = user.role === 'ADMIN' ? true : Array.isArray(item.purchases) ? item.purchases.length > 0 : false
         
         // For paid news that hasn't been purchased by participant, hide the title and content
@@ -93,7 +109,7 @@ export async function GET(request: NextRequest) {
           isHidden: hidePaidContent,
         }
       }),
-      total: newsList.length,
+      total: filteredNews.length,
       paidNewsPrice,
     }
 
