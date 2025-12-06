@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/auth'
 import { broadcastNotification } from '@/lib/realtime-server'
 import { getCache, CACHE_KEYS } from '@/lib/cache'
+import { configureAutoDay } from '@/lib/day-scheduler'
 import { Prisma } from '@prisma/client'
 
 const bodySchema = z.object({
@@ -73,6 +74,9 @@ export async function POST(request: NextRequest) {
     const cache = await getCache()
     await cache.del(CACHE_KEYS.CURRENT_DAY)
     await cache.del(CACHE_KEYS.LEADERBOARD)
+
+    // Pastikan scheduler otomatis dimatikan saat reset supaya countdown OBS tidak lanjut dari jadwal lama
+    await configureAutoDay({ enabled: false })
 
     broadcastNotification({
       type: 'warning',
