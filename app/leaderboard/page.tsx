@@ -38,7 +38,7 @@ export default function LeaderboardPage() {
     setError(null)
     try {
       const [leaderboardRes, dayRes] = await Promise.all([
-        apiClient.get<{ leaderboard: any[] }>(`/leaderboard`),
+        apiClient.get<{ leaderboard: any[] }>(`/leaderboard?limit=15`),
         apiClient.get<DayControl>(`/api/days/current`).catch(() => null),
       ])
 

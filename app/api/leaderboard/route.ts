@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     await requireUser(request)
 
     const { searchParams } = new URL(request.url)
-    const limit = Number(searchParams.get('limit') ?? '100')
+    const limit = Math.min(Number(searchParams.get('limit') ?? '15'), 15)
 
     const cache = await getCache()
     const cached = await cache.get<{ leaderboard: any[]; total: number }>(CACHE_KEYS.LEADERBOARD)

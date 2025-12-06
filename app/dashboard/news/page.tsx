@@ -18,6 +18,7 @@ import { apiClient, ApiError } from '@/lib/api-client'
 import { useSession } from '@/components/session-provider'
 
 type NewsFilter = 'all' | 'free' | 'paid'
+type DayFilter = 'all' | number
 
 type NewsItem = {
   id: string
@@ -68,7 +69,10 @@ function formatShortDate(date: string) {
 export default function NewsPage() {
   const { user, refresh } = useSession()
   const [filter, setFilter] = useState<NewsFilter>('all')
+  const [dayFilter, setDayFilter] = useState<DayFilter>('all')
+  const [searchTerm, setSearchTerm] = useState('')
   const [newsItems, setNewsItems] = useState<NewsItem[]>([])
+  const [daysAvailable, setDaysAvailable] = useState<number[]>([])
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -107,6 +111,8 @@ export default function NewsPage() {
         isHidden: Boolean(item.isHidden),
       }))
       setNewsItems(normalized)
+      const uniqueDays = Array.from(new Set(normalized.map(n => n.dayNumber))).sort((a, b) => a - b)
+      setDaysAvailable(uniqueDays)
     } catch (err) {
       const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Gagal memuat berita'
       setError(message)
@@ -222,7 +228,22 @@ export default function NewsPage() {
     [user]
   )
 
-  const filteredNews = useMemo(() => newsItems, [newsItems])
+  const filteredNews = useMemo(() => {
+    let result = newsItems
+    
+    const query = searchTerm.trim().toLowerCase()
+    if (query) {
+      result = result.filter((item) =>
+        [item.title, item.preview, item.companyCode ?? ''].join(' ').toLowerCase().includes(query)
+      )
+    }
+    
+    if (dayFilter !== 'all') {
+      result = result.filter((item) => item.dayNumber === dayFilter)
+    }
+    
+    return result
+  }, [newsItems, searchTerm, dayFilter])
 
   return (
     <div className="p-6 space-y-6">
@@ -231,7 +252,8 @@ export default function NewsPage() {
         <p className="text-gray-600">Baca berita dan analisis pasar terbaru</p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="space-y-4">
+        <div className="flex flex-wrap gap-2">
         {(['all', 'free', 'paid'] as const).map((value) => (
           <Button
             key={value}
@@ -246,6 +268,37 @@ export default function NewsPage() {
           <RefreshCcw className="mr-2 h-4 w-4" />
           Segarkan
         </Button>
+        </div>
+        
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-xs">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Cari berita</label>
+            <input
+              type="text"
+              placeholder="Judul, konten, atau kode perusahaan..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+            />
+          </div>
+          {daysAvailable.length > 1 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Filter Hari</label>
+              <select
+                value={dayFilter === 'all' ? 'all' : dayFilter}
+                onChange={(e) => setDayFilter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+              >
+                <option value="all">Semua Hari</option>
+                {daysAvailable.map((day) => (
+                  <option key={day} value={day}>
+                    Hari {day}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
       </div>
 
       {error && (
