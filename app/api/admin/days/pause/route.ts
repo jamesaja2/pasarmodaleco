@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       data: {
         isPaused: true,
         pausedAt: new Date(),
-        remainingMs: remainingMs,
+        remainingMs: remainingMs || null,
       },
     })
 

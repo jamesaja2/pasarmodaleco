@@ -46,6 +46,9 @@ export async function POST(request: NextRequest) {
           isSimulationActive: false,
           currentDay: 0,
           lastDayChange: new Date(),
+          remainingMs: null,
+          isPaused: false,
+          pausedAt: null,
         },
         create: {
           id: 'day-control-singleton',
@@ -53,6 +56,8 @@ export async function POST(request: NextRequest) {
           currentDay: 0,
           totalDays: 15,
           lastDayChange: new Date(),
+          remainingMs: null,
+          isPaused: false,
         },
       })
 

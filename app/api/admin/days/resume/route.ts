@@ -30,15 +30,13 @@ export async function POST(request: NextRequest) {
       resumeScheduler(remainingMs)
     }
 
-    // Update database
+    // Update database - clear remainingMs after resuming
     await prisma.dayControl.update({
       where: { id: 'day-control-singleton' },
       data: {
         isPaused: false,
         pausedAt: null,
         remainingMs: null,
-        // Update lastDayChange to now minus elapsed time so countdown is correct
-        lastDayChange: new Date(Date.now() - (dayControl.remainingMs ? 0 : 0)),
       },
     })
 
