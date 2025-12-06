@@ -35,7 +35,7 @@ export function LeaderboardWidget() {
 
   const fetchLeaderboard = useCallback(async () => {
     try {
-      const response = await fetch('/api/obs/leaderboard?limit=10', { cache: 'no-store' })
+      const response = await fetch('/api/obs/leaderboard', { cache: 'no-store' })
       if (!response.ok) {
         throw new Error('Gagal memuat leaderboard')
       }
@@ -84,9 +84,9 @@ export function LeaderboardWidget() {
       <div className="flex w-full max-w-6xl flex-col gap-10">
         <header className="text-center">
           <p className="text-sm uppercase tracking-[0.35em] text-slate-400">Papan Klasemen</p>
-          <h1 className="mt-4 text-4xl font-semibold text-white md:text-6xl">Top 10 Peserta</h1>
+          <h1 className="mt-4 text-4xl font-semibold text-white md:text-6xl">Semua Peserta</h1>
           <p className="mt-2 text-base text-slate-300">
-            Urutan berdasarkan nilai portofolio terkini. Pembaruan otomatis saat hari simulasi berubah.
+            Urutan berdasarkan nilai portofolio terkini dari semua {data?.total ?? 0} peserta. Pembaruan otomatis saat hari simulasi berubah.
           </p>
           {error && !loading ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
         </header>
@@ -126,25 +126,25 @@ export function LeaderboardWidget() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-slate-900/60 p-6 text-white">
+          <div className="rounded-3xl border border-white/10 bg-slate-900/60 p-6 text-white flex flex-col overflow-hidden h-96">
             <div className="flex items-center gap-3">
               <TrendingUp className="h-7 w-7 text-emerald-300" />
-              <h2 className="text-2xl font-semibold">Posisi Selanjutnya</h2>
+              <h2 className="text-2xl font-semibold">Ranking Lengkap</h2>
             </div>
-            <div className="mt-5 divide-y divide-white/5 border-t border-white/10">
+            <div className="mt-5 flex-1 overflow-y-auto divide-y divide-white/5 border-t border-white/10">
               {remaining.length === 0 && !loading ? (
-                <p className="py-6 text-sm text-slate-300">Menunggu data tambahan.</p>
+                <p className="py-6 text-sm text-slate-300">Menunggu data.</p>
               ) : null}
               {remaining.map((entry) => (
-                <article key={entry.rank} className="flex items-center justify-between py-4">
+                <article key={entry.rank} className="flex items-center justify-between py-3 px-2">
                   <div>
                     <p className="text-sm text-slate-300">#{entry.rank}</p>
-                    <p className="text-lg font-semibold text-white">{entry.teamName}</p>
+                    <p className="text-base font-semibold text-white">{entry.teamName}</p>
                     <p className="text-xs text-slate-400">{entry.school}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-slate-400">Rp {entry.portfolioValue.toLocaleString('id-ID')}</p>
-                    <p className={`text-sm ${entry.returnPercentage >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                    <p className={`text-xs ${entry.returnPercentage >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
                       {entry.returnPercentage >= 0 ? '+' : ''}
                       {entry.returnPercentage.toLocaleString('id-ID', { maximumFractionDigits: 2 })}%
                     </p>

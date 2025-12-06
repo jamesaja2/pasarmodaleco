@@ -3,12 +3,10 @@ import { prisma } from '@/lib/prisma'
 import { CACHE_KEYS, getCache } from '@/lib/cache'
 import type { Prisma } from '@prisma/client'
 
-const DEFAULT_LIMIT = 10
-
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const limit = Number(searchParams.get('limit') ?? DEFAULT_LIMIT)
+    const limit = Number(searchParams.get('limit') ?? '999999')
 
     const cache = await getCache()
     const cached = await cache.get<{ leaderboard: any[]; total: number }>(CACHE_KEYS.LEADERBOARD)
