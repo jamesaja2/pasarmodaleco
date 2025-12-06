@@ -1,10 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Trophy, Medal, RefreshCcw } from 'lucide-react'
 import { apiClient, ApiError } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 type LeaderboardEntry = {
   rank: number
@@ -12,6 +14,11 @@ type LeaderboardEntry = {
   school: string
   portfolioValue: number
   returnPercentage: number
+}
+
+type DayControl = {
+  currentDay: number
+  totalDays: number
 }
 
 function formatCurrency(value: number) {
@@ -22,13 +29,20 @@ export default function LeaderboardPage() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [dayControl, setDayControl] = useState<DayControl | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedDay, setSelectedDay] = useState<string>('all')
 
   const fetchLeaderboard = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const response = await apiClient.get<{ leaderboard: any[] }>(`/leaderboard`)
-      const normalized: LeaderboardEntry[] = (response.leaderboard ?? []).map((item) => ({
+      const [leaderboardRes, dayRes] = await Promise.all([
+        apiClient.get<{ leaderboard: any[] }>(`/leaderboard`),
+        apiClient.get<DayControl>(`/api/days/current`).catch(() => null),
+      ])
+
+      const normalized: LeaderboardEntry[] = (leaderboardRes.leaderboard ?? []).map((item) => ({
         rank: Number(item.rank ?? 0),
         teamName: String(item.teamName ?? item.username ?? '-'),
         school: String(item.school ?? '-'),
@@ -36,6 +50,10 @@ export default function LeaderboardPage() {
         returnPercentage: Number(item.returnPercentage ?? 0),
       }))
       setEntries(normalized)
+
+      if (dayRes) {
+        setDayControl(dayRes)
+      }
     } catch (err) {
       const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Gagal memuat leaderboard'
       setError(message)
@@ -48,6 +66,19 @@ export default function LeaderboardPage() {
     fetchLeaderboard().catch(() => null)
   }, [fetchLeaderboard])
 
+  const filteredEntries = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase()
+    let result = entries
+
+    if (query) {
+      result = result.filter((entry) =>
+        [entry.teamName, entry.school].join(' ').toLowerCase().includes(query)
+      )
+    }
+
+    return result
+  }, [entries, searchTerm])
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-lime-100 p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -57,10 +88,39 @@ export default function LeaderboardPage() {
             <h1 className="text-4xl font-bold">Leaderboard</h1>
           </div>
           <p className="text-gray-600">Ranking peserta berdasarkan nilai portfolio</p>
+          {dayControl && (
+            <p className="text-sm text-gray-500 mt-2">Hari ke-{dayControl.currentDay} dari {dayControl.totalDays} hari simulasi</p>
+          )}
           <Button variant="ghost" size="sm" className="mt-4" onClick={fetchLeaderboard} disabled={loading}>
             <RefreshCcw className="mr-2 h-4 w-4" />Segarkan Data
           </Button>
         </div>
+
+        <Card>
+          <CardContent className="flex flex-wrap items-center gap-3 pt-6">
+            <Input
+              placeholder="Cari tim atau sekolah..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-md"
+            />
+            {dayControl && dayControl.totalDays > 1 && (
+              <Select value={selectedDay} onValueChange={setSelectedDay}>
+                <SelectTrigger className="max-w-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Hari</SelectItem>
+                  {Array.from({ length: dayControl.totalDays }, (_, i) => i + 1).map((day) => (
+                    <SelectItem key={day} value={`day-${day}`}>
+                      Hari {day}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </CardContent>
+        </Card>
 
         {error && (
           <Card className="border-red-300 bg-red-50">
@@ -80,8 +140,14 @@ export default function LeaderboardPage() {
           </Card>
         )}
 
+        {!loading && filteredEntries.length === 0 && entries.length > 0 && (
+          <Card>
+            <CardContent className="py-6 text-sm text-gray-500 text-center">Tidak ada peserta yang sesuai dengan pencarian.</CardContent>
+          </Card>
+        )}
+
         <div className="space-y-3">
-          {entries.map((entry) => (
+          {filteredEntries.map((entry) => (
             <Card key={entry.rank} className="hover:shadow-lg transition-shadow">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-6">
