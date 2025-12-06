@@ -69,7 +69,7 @@ export default function ParticipantCompaniesPage() {
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Daftar Perusahaan</h1>
-          <p className="text-gray-600">Lihat profil emiten dan laporan keuangan per hari simulasi.</p>
+          <p className="text-gray-600">Lihat profil emiten dan laporan laba rugi per hari simulasi.</p>
         </div>
         <Button variant="outline" onClick={() => fetchCompanies()} disabled={loading}>
           <RefreshCcw className="h-4 w-4 mr-2" /> Segarkan

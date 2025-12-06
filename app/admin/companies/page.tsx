@@ -669,7 +669,7 @@ EFGH,1,10500,true`
         <DialogContent className="max-w-3xl">
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-semibold">Kelola Laporan Keuangan</h2>
+              <h2 className="text-xl font-semibold">Kelola Laporan Laba Rugi</h2>
               <p className="text-sm text-gray-500">Unggah tautan PDF dan ringkasan laporan untuk {managerCompany?.companyName ?? 'perusahaan'}.</p>
             </div>
 
@@ -726,13 +726,13 @@ EFGH,1,10500,true`
               <div className="flex justify-end">
                 <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700" disabled={reportSubmitting || reportLoading}>
                   {reportSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                  Simpan Laporan
+                  Simpan Laporan Laba Rugi
                 </Button>
               </div>
             </form>
 
             <div className="border-t pt-4">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Laporan Terdaftar</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Laporan Laba Rugi Terdaftar</h3>
               {reportLoading ? (
                 <div className="flex items-center justify-center py-8 text-sm text-gray-500">
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Memuat laporan...

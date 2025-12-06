@@ -79,7 +79,7 @@ export default function CompanyDetailPage() {
   const handleOpenPdf = (pdfUrl: string, dayNumber: number) => {
     setSelectedPdf({
       url: pdfUrl,
-      title: `Laporan Keuangan - Hari ${dayNumber}`,
+      title: `Laporan Laba Rugi - Hari ${dayNumber}`,
     })
     setPdfViewerOpen(true)
   }
@@ -235,12 +235,12 @@ export default function CompanyDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Laporan Keuangan</CardTitle>
+              <CardTitle>Laporan Laba Rugi</CardTitle>
               <CardDescription>Dokumen akan tersedia ketika hari simulasi terkait dimulai.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {data.reports.length === 0 ? (
-                <p className="text-sm text-gray-500">Belum ada laporan keuangan yang tersedia.</p>
+                <p className="text-sm text-gray-500">Belum ada laporan laba rugi yang tersedia.</p>
               ) : (
                 data.reports.map((report) => (
                   <div key={report.id} className="rounded-lg border border-gray-200 p-4 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -328,7 +328,7 @@ export default function CompanyDetailPage() {
             <div className="flex items-center justify-between">
               <DialogTitle className="text-lg font-semibold flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                {selectedPdf?.title ?? 'Laporan Keuangan'}
+                {selectedPdf?.title ?? 'Laporan Laba Rugi'}
               </DialogTitle>
             </div>
           </DialogHeader>

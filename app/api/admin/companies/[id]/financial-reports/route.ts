@@ -93,8 +93,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     if (report.isAvailable) {
       broadcastNotification({
         type: 'info',
-        title: 'Laporan Keuangan Baru',
-        message: `Laporan keuangan hari ${report.dayNumber} untuk ${company.companyName} siap dibaca.`,
+        title: 'Laporan Laba Rugi Baru',
+        message: `Laporan laba rugi hari ${report.dayNumber} untuk ${company.companyName} siap dibaca.`,
       })
     }
 
