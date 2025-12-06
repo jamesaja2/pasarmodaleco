@@ -69,6 +69,7 @@ export default function CompaniesPage() {
   const [priceImportDialogOpen, setPriceImportDialogOpen] = useState(false)
   const [priceImportData, setPriceImportData] = useState('')
   const [priceImporting, setPriceImporting] = useState(false)
+  const [reportDeleting, setReportDeleting] = useState<string | null>(null)
 
   const fetchCompanies = useCallback(async () => {
     setLoading(true)
@@ -343,6 +344,25 @@ export default function CompaniesPage() {
       toast({ title: 'Gagal menyimpan laporan', description: message, variant: 'destructive' })
     } finally {
       setReportSubmitting(false)
+    }
+  }
+
+  const handleReportDelete = async (reportId: string) => {
+    if (!managerCompany) return
+    if (!confirm('Yakin ingin menghapus laporan ini?')) return
+
+    setReportDeleting(reportId)
+    setReportError(null)
+    try {
+      await apiClient.delete(`/admin/companies/${managerCompany.id}/financial-reports/${reportId}`)
+      toast({ title: 'Laporan dihapus', description: 'Laporan berhasil dihapus.' })
+      await fetchReportEntries(managerCompany)
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Gagal menghapus laporan'
+      setReportError(message)
+      toast({ title: 'Gagal menghapus', description: message, variant: 'destructive' })
+    } finally {
+      setReportDeleting(null)
     }
   }
 
@@ -728,6 +748,7 @@ EFGH,1,10500,true`
                         <th className="py-2 px-3 text-left font-medium text-gray-600">Ringkasan</th>
                         <th className="py-2 px-3 text-left font-medium text-gray-600">Status</th>
                         <th className="py-2 px-3 text-left font-medium text-gray-600">Terakhir diperbarui</th>
+                        <th className="py-2 px-3 text-left font-medium text-gray-600">Aksi</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -749,6 +770,21 @@ EFGH,1,10500,true`
                           </td>
                           <td className="py-2 px-3 text-xs text-gray-500">
                             {new Date(entry.updatedAt).toLocaleString('id-ID')}
+                          </td>
+                          <td className="py-2 px-3">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleReportDelete(entry.id)}
+                              disabled={reportDeleting === entry.id}
+                            >
+                              {reportDeleting === entry.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
                           </td>
                         </tr>
                       ))}
