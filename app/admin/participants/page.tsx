@@ -44,6 +44,7 @@ export default function ParticipantsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [resettingId, setResettingId] = useState<string | null>(null)
   const [resettingLoginId, setResettingLoginId] = useState<string | null>(null)
+  const [bulkResettingLogin, setBulkResettingLogin] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [importing, setImporting] = useState(false)
   const [passwordDialog, setPasswordDialog] = useState<{ username: string; password: string } | null>(null)
@@ -216,6 +217,25 @@ export default function ParticipantsPage() {
     }
   }
 
+  const handleResetAllLogins = async () => {
+    if (!confirm('Reset status login SEMUA peserta? Semua peserta akan dianggap belum login.')) {
+      return
+    }
+
+    setBulkResettingLogin(true)
+    try {
+      const res = await apiClient.post<{ resetCount: number }>(`/admin/participants/reset-logins`, {})
+      const count = res.resetCount ?? 0
+      toast({ title: 'Login peserta direset', description: `${count} peserta sekarang berstatus belum login.` })
+      await fetchParticipants()
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : 'Gagal reset login massal'
+      toast({ title: 'Gagal reset login massal', description: message, variant: 'destructive' })
+    } finally {
+      setBulkResettingLogin(false)
+    }
+  }
+
   const handleExportCards = async () => {
     setExporting(true)
     try {
@@ -360,6 +380,10 @@ export default function ParticipantsPage() {
           <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={handleImportClick} disabled={importing}>
             {importing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
             Import CSV
+          </Button>
+          <Button variant="outline" onClick={handleResetAllLogins} disabled={bulkResettingLogin}>
+            {bulkResettingLogin ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LogIn className="w-4 h-4 mr-2" />} 
+            Reset Login Semua
           </Button>
           <Button className="bg-green-600 hover:bg-green-700" onClick={openCreateDialog}>
             <Plus className="w-4 h-4 mr-2" />
